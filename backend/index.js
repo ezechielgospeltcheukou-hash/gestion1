@@ -10,7 +10,7 @@ app.get('/', (req, res) => {
   res.json({ message: 'API Comptabilité Backend is running!' });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8081;
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Serveur backend démarré sur le port ${PORT}`);

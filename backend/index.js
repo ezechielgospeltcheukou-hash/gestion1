@@ -39,7 +39,7 @@ const startServer = async () => {
     await sequelize.sync({ alter: true });
     console.log('✅ Modèles synchronisés avec la base de données');
 
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Serveur backend démarré sur le port ${PORT}`);
     });
   } catch (error) {

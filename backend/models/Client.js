@@ -26,6 +26,10 @@ const Client = sequelize.define('Client', {
     type: DataTypes.TEXT,
     allowNull: true
   },
+  balance: {
+    type: DataTypes.DECIMAL(15, 2),
+    defaultValue: 0
+  },
   isActive: {
     type: DataTypes.BOOLEAN,
     defaultValue: true

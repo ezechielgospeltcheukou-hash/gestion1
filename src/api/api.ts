@@ -104,37 +104,45 @@ class ApiService {
 
   async register(data: RegisterData): Promise<ApiResponse<AuthResponse>> {
     try {
+      console.log('Calling register API at:', `${API_BASE_URL}/auth/register`);
+      console.log('Sending data:', data);
       const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify(data),
       });
+      console.log('Register response status:', response.status);
       const result = await this.handleResponse<AuthResponse>(response);
+      console.log('Register result:', result);
       if (result.success && result.data) {
         await this.saveToStorage(result.data.token, result.data);
       }
       return result;
     } catch (error) {
-      console.error('Register error:', error);
-      return { success: false, message: 'Erreur de connexion au serveur' };
+      console.error('Register error details:', error);
+      return { success: false, message: 'Erreur de connexion au serveur: ' + (error as Error).message };
     }
   }
 
   async login(data: LoginData): Promise<ApiResponse<AuthResponse>> {
     try {
+      console.log('Calling login API at:', `${API_BASE_URL}/auth/login`);
+      console.log('Sending data:', data);
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify(data),
       });
+      console.log('Login response status:', response.status);
       const result = await this.handleResponse<AuthResponse>(response);
+      console.log('Login result:', result);
       if (result.success && result.data) {
         await this.saveToStorage(result.data.token, result.data);
       }
       return result;
     } catch (error) {
-      console.error('Login error:', error);
-      return { success: false, message: 'Erreur de connexion au serveur' };
+      console.error('Login error details:', error);
+      return { success: false, message: 'Erreur de connexion au serveur: ' + (error as Error).message };
     }
   }
 

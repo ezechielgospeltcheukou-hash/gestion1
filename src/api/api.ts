@@ -162,6 +162,19 @@ class ApiService {
   getUser(): AuthResponse | null {
     return this.user;
   }
+
+  async getStats(): Promise<ApiResponse<any>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/stats`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+      return await this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('GetStats error:', error);
+      return { success: false, message: 'Erreur de connexion au serveur' };
+    }
+  }
 }
 
 export const api = new ApiService();

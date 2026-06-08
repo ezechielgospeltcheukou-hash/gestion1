@@ -1,8 +1,8 @@
 import * as SecureStore from 'expo-secure-store';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://comptabilite-production-08f2.up.railway.app/api';
-const TOKEN_KEY = '@comptabilite:token';
-const USER_KEY = '@comptabilite:user';
+const TOKEN_KEY = 'comptabilite_token';
+const USER_KEY = 'comptabilite_user';
 
 interface ApiResponse<T> {
   data?: T;

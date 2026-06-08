@@ -1,6 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://comptabilite-production-08f2.up.railway.app/api';
 
 interface ApiResponse<T> {
   data?: T;
@@ -29,59 +27,11 @@ interface RegisterData {
   businessName?: string;
 }
 
-const TOKEN_KEY = '@comptabilite:token';
-const USER_KEY = '@comptabilite:user';
-
 class ApiService {
   private token: string | null = null;
   private user: AuthResponse | null = null;
 
   constructor() {
-    this.init();
-  }
-
-  private async init() {
-    await this.loadFromStorage();
-  }
-
-  private async loadFromStorage() {
-    try {
-      const [token, userStr] = await Promise.all([
-        AsyncStorage.getItem(TOKEN_KEY),
-        AsyncStorage.getItem(USER_KEY)
-      ]);
-      
-      this.token = token;
-      this.user = userStr ? JSON.parse(userStr) : null;
-    } catch (error) {
-      console.error('Error loading from storage:', error);
-    }
-  }
-
-  private async saveToStorage(token: string, user: AuthResponse) {
-    try {
-      this.token = token;
-      this.user = user;
-      await Promise.all([
-        AsyncStorage.setItem(TOKEN_KEY, token),
-        AsyncStorage.setItem(USER_KEY, JSON.stringify(user))
-      ]);
-    } catch (error) {
-      console.error('Error saving to storage:', error);
-    }
-  }
-
-  private async clearStorage() {
-    try {
-      this.token = null;
-      this.user = null;
-      await Promise.all([
-        AsyncStorage.removeItem(TOKEN_KEY),
-        AsyncStorage.removeItem(USER_KEY)
-      ]);
-    } catch (error) {
-      console.error('Error clearing storage:', error);
-    }
   }
 
   private getHeaders() {
@@ -115,7 +65,8 @@ class ApiService {
       const result = await this.handleResponse<AuthResponse>(response);
       console.log('Register result:', result);
       if (result.success && result.data) {
-        await this.saveToStorage(result.data.token, result.data);
+        this.token = result.data.token;
+        this.user = result.data;
       }
       return result;
     } catch (error) {
@@ -137,7 +88,8 @@ class ApiService {
       const result = await this.handleResponse<AuthResponse>(response);
       console.log('Login result:', result);
       if (result.success && result.data) {
-        await this.saveToStorage(result.data.token, result.data);
+        this.token = result.data.token;
+        this.user = result.data;
       }
       return result;
     } catch (error) {
@@ -147,28 +99,8 @@ class ApiService {
   }
 
   async logout() {
-    await this.clearStorage();
-  }
-
-  async getMe(): Promise<ApiResponse<AuthResponse>> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/me`, {
-        method: 'GET',
-        headers: this.getHeaders(),
-      });
-      return await this.handleResponse<AuthResponse>(response);
-    } catch (error) {
-      console.error('GetMe error:', error);
-      return { success: false, message: 'Erreur de connexion au serveur' };
-    }
-  }
-
-  isAuthenticated(): boolean {
-    return !!this.token;
-  }
-
-  getUser(): AuthResponse | null {
-    return this.user;
+    this.token = null;
+    this.user = null;
   }
 
   async getStats(): Promise<ApiResponse<any>> {
@@ -182,6 +114,14 @@ class ApiService {
       console.error('GetStats error:', error);
       return { success: false, message: 'Erreur de connexion au serveur' };
     }
+  }
+
+  isAuthenticated(): boolean {
+    return !!this.token;
+  }
+
+  getUser(): AuthResponse | null {
+    return this.user;
   }
 }
 

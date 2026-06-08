@@ -3,25 +3,12 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { api } from '../src/api/api';
 
 export default function RootLayout() {
-  const [appReady, setAppReady] = useState(false);
   const [initialNavigationDone, setInitialNavigationDone] = useState(false);
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
-    const initApp = async () => {
-      try {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        setAppReady(true);
-      } catch (error) {
-        console.error('App initialization failed:', error);
-      }
-    };
-    initApp();
-  }, []);
-
-  useEffect(() => {
-    if (!appReady || initialNavigationDone) return;
+    if (initialNavigationDone) return;
 
     const inAuthGroup = segments[0] === '(auth)';
     const inTabsGroup = segments[0] === '(tabs)';
@@ -38,9 +25,7 @@ export default function RootLayout() {
     }
 
     setInitialNavigationDone(true);
-  }, [appReady, initialNavigationDone, segments]);
-
-  if (!appReady) return null;
+  }, [initialNavigationDone, segments]);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>

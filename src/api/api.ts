@@ -34,9 +34,10 @@ interface RegisterData {
 class ApiService {
   private token: string | null = null;
   private user: AuthResponse | null = null;
+  private readyPromise: Promise<void>;
 
   constructor() {
-    this.init();
+    this.readyPromise = this.init();
   }
 
   private async init() {
@@ -50,6 +51,10 @@ class ApiService {
     } catch (error) {
       console.error('Error loading from storage:', error);
     }
+  }
+
+  async waitUntilReady(): Promise<void> {
+    await this.readyPromise;
   }
 
   private getHeaders() {
@@ -71,6 +76,7 @@ class ApiService {
   }
 
   async register(data: RegisterData): Promise<ApiResponse<AuthResponse>> {
+    await this.waitUntilReady();
     try {
       console.log('Calling register API at:', `${API_BASE_URL}/auth/register`);
       console.log('Sending data:', data);
@@ -96,6 +102,7 @@ class ApiService {
   }
 
   async login(data: LoginData): Promise<ApiResponse<AuthResponse>> {
+    await this.waitUntilReady();
     try {
       console.log('Calling login API at:', `${API_BASE_URL}/auth/login`);
       console.log('Sending data:', data);
@@ -128,6 +135,7 @@ class ApiService {
   }
 
   async getStats(): Promise<ApiResponse<any>> {
+    await this.waitUntilReady();
     try {
       const response = await fetch(`${API_BASE_URL}/stats`, {
         method: 'GET',
@@ -140,11 +148,13 @@ class ApiService {
     }
   }
 
-  isAuthenticated(): boolean {
+  async isAuthenticated(): Promise<boolean> {
+    await this.waitUntilReady();
     return !!this.token;
   }
 
-  getUser(): AuthResponse | null {
+  async getUser(): Promise<AuthResponse | null> {
+    await this.waitUntilReady();
     return this.user;
   }
 }

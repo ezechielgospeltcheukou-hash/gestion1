@@ -11,7 +11,7 @@ export default function RootLayout() {
   useEffect(() => {
     const initApp = async () => {
       try {
-        await new Promise(resolve => setTimeout(resolve, 500)); // Wait for api init
+        await api.waitUntilReady();
         setAppReady(true);
       } catch (error) {
         console.error('App initialization failed:', error);
@@ -24,21 +24,25 @@ export default function RootLayout() {
   useEffect(() => {
     if (!appReady || initialNavigationDone) return;
 
-    const inAuthGroup = segments[0] === '(auth)';
-    const inTabsGroup = segments[0] === '(tabs)';
-    const isAuthenticated = api.isAuthenticated();
+    const checkAuth = async () => {
+      const isAuthenticated = await api.isAuthenticated();
+      const inAuthGroup = segments[0] === '(auth)';
+      const inTabsGroup = segments[0] === '(tabs)';
 
-    console.log('Navigation state:', { inAuthGroup, inTabsGroup, isAuthenticated, segments });
+      console.log('Navigation state:', { inAuthGroup, inTabsGroup, isAuthenticated, segments });
 
-    if (isAuthenticated && !inTabsGroup) {
-      console.log('Redirecting to dashboard');
-      router.replace('/(tabs)');
-    } else if (!isAuthenticated && !inAuthGroup) {
-      console.log('Redirecting to login');
-      router.replace('/(auth)/login');
-    }
+      if (isAuthenticated && !inTabsGroup) {
+        console.log('Redirecting to dashboard');
+        router.replace('/(tabs)');
+      } else if (!isAuthenticated && !inAuthGroup) {
+        console.log('Redirecting to login');
+        router.replace('/(auth)/login');
+      }
 
-    setInitialNavigationDone(true);
+      setInitialNavigationDone(true);
+    };
+
+    checkAuth();
   }, [appReady, initialNavigationDone, segments]);
 
   if (!appReady) return null;

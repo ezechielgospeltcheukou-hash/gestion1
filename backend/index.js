@@ -18,6 +18,7 @@ const supplierRoutes = require('./routes/supplierRoutes');
 const expenseRoutes = require('./routes/expenseRoutes');
 const clientRoutes = require('./routes/clientRoutes');
 const statsRoutes = require('./routes/statsRoutes');
+const employeeRoutes = require('./routes/employeeRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
@@ -26,6 +27,7 @@ app.use('/api/suppliers', supplierRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/employees', employeeRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'API Comptabilité Backend is running!' });

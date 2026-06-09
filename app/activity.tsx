@@ -1,189 +1,67 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
-import { Clock, User, ArrowLeft, Package, ShoppingCart, TrendingDown, Users, Truck, Shield } from 'lucide-react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
-import { getActivityLogs, ActivityLog, isAdmin } from '../src/database/database';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
-
-const getActionIcon = (entityType: string) => {
-  switch (entityType) {
-    case 'PRODUCT':
-      return <Package size={18} color="#f59e0b" />;
-    case 'SALE':
-      return <ShoppingCart size={18} color="#3b82f6" />;
-    case 'EXPENSE':
-      return <TrendingDown size={18} color="#ef4444" />;
-    case 'CLIENT':
-      return <Users size={18} color="#6366f1" />;
-    case 'SUPPLIER':
-      return <Truck size={18} color="#f97316" />;
-    case 'USER':
-      return <Shield size={18} color="#059669" />;
-    default:
-      return <Clock size={18} color="#9ca3af" />;
-  }
-};
-
-const getActionText = (action: string, entityType: string) => {
-  const map: Record<string, string> = {
-    'CREATE_PRODUCT': 'Produit créé',
-    'UPDATE_PRODUCT': 'Produit modifié',
-    'DELETE_PRODUCT': 'Produit supprimé',
-    'CREATE_SALE': 'Vente enregistrée',
-    'DELETE_SALE': 'Vente annulée',
-    'CREATE_EXPENSE': 'Dépense ajoutée',
-    'UPDATE_EXPENSE': 'Dépense modifiée',
-    'DELETE_EXPENSE': 'Dépense supprimée',
-    'CREATE_CLIENT': 'Client ajouté',
-    'UPDATE_CLIENT': 'Client modifié',
-    'DELETE_CLIENT': 'Client supprimé',
-    'CREATE_SUPPLIER': 'Fournisseur ajouté',
-    'UPDATE_SUPPLIER': 'Fournisseur modifié',
-    'DELETE_SUPPLIER': 'Fournisseur supprimé',
-    'CREATE_USER': 'Utilisateur ajouté',
-    'UPDATE_USER': 'Utilisateur modifié',
-    'DELETE_USER': 'Utilisateur supprimé',
-  };
-  return map[action] || `${action} ${entityType}`;
-};
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ArrowLeft, Clock } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 
 export default function ActivityScreen() {
   const router = useRouter();
-  const [logs, setLogs] = useState<ActivityLog[]>([]);
-
-  const loadLogs = useCallback(() => {
-    const data = getActivityLogs(100);
-    setLogs(data);
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadLogs();
-    }, [loadLogs])
-  );
-
-  if (!isAdmin()) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <ArrowLeft color="#111827" size={24} />
-          </TouchableOpacity>
-          <Text style={styles.title}>Accès refusé</Text>
-        </View>
-        <View style={styles.centerContent}>
-          <Shield size={64} color="#ef4444" />
-          <Text style={styles.accessDeniedText}>Seuls les administrateurs peuvent accéder au journal</Text>
-        </View>
-      </View>
-    );
-  }
-
-  const renderLogItem = ({ item }: { item: ActivityLog }) => (
-    <View style={styles.logCard}>
-      <View style={styles.logIconContainer}>
-        {getActionIcon(item.entity_type)}
-      </View>
-      <View style={styles.logDetails}>
-        <Text style={styles.logAction}>{getActionText(item.action, item.entity_type)}</Text>
-        {item.details && <Text style={styles.logDetailsText}>{item.details}</Text>}
-        <View style={styles.logMeta}>
-          <User size={12} color="#9ca3af" />
-          <Text style={styles.logUser}>{item.username || 'Système'}</Text>
-          <Clock size={12} color="#9ca3af" style={{ marginLeft: 10 }} />
-          <Text style={styles.logDate}>
-            {format(new Date(item.created_at), 'dd MMM yyyy HH:mm', { locale: fr })}
-          </Text>
-        </View>
-      </View>
-    </View>
-  );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <ArrowLeft color="#111827" size={24} />
+        <TouchableOpacity onPress={() => router.back()}>
+          <ArrowLeft size={24} color="white" />
         </TouchableOpacity>
-        <Text style={styles.title}>Journal d'activité</Text>
+        <Text style={styles.headerTitle}>Activité</Text>
+        <View style={{ width: 24 }} />
       </View>
 
-      <FlatList
-        data={logs}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={renderLogItem}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Clock size={48} color="#d1d5db" />
-            <Text style={styles.emptyText}>Aucune activité enregistrée</Text>
-          </View>
-        }
-      />
-    </View>
+      <View style={styles.content}>
+        <Clock size={64} color="#059669" />
+        <Text style={styles.title}>En cours de développement</Text>
+        <Text style={styles.subtitle}>
+          Cette fonctionnalité sera disponible très bientôt !
+        </Text>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f9fafb' },
+  container: {
+    flex: 1,
+    backgroundColor: '#f3f4f6',
+  },
   header: {
+    backgroundColor: '#059669',
+    padding: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-    paddingTop: 50
+    justifyContent: 'space-between',
   },
-  backBtn: { marginRight: 15 },
-  title: { fontSize: 20, fontWeight: 'bold', color: '#111827' },
-  centerContent: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  accessDeniedText: {
+  headerTitle: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginTop: 20,
+    textAlign: 'center',
+  },
+  subtitle: {
     fontSize: 16,
     color: '#6b7280',
+    marginTop: 10,
     textAlign: 'center',
-    marginTop: 20,
-    paddingHorizontal: 40
   },
-  listContent: { padding: 16 },
-  logCard: {
-    flexDirection: 'row',
-    backgroundColor: 'white',
-    padding: 16,
-    borderRadius: 15,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#f3f4f6',
-    elevation: 1
-  },
-  logIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#f3f4f6',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12
-  },
-  logDetails: { flex: 1 },
-  logAction: { fontSize: 15, fontWeight: '600', color: '#1f2937' },
-  logDetailsText: { fontSize: 13, color: '#6b7280', marginTop: 2 },
-  logMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 6
-  },
-  logUser: { fontSize: 12, color: '#9ca3af', marginLeft: 4 },
-  logDate: { fontSize: 12, color: '#9ca3af', marginLeft: 4 },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 80
-  },
-  emptyText: {
-    marginTop: 12,
-    color: '#9ca3af',
-    fontSize: 16
-  }
 });

@@ -27,6 +27,48 @@ interface RegisterData {
   businessName?: string;
 }
 
+interface Client {
+  id?: number;
+  name: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  balance?: number;
+}
+
+interface Product {
+  id?: number;
+  name: string;
+  description?: string;
+  price: number;
+  quantity: number;
+  minQuantity?: number;
+}
+
+interface Supplier {
+  id?: number;
+  name: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+}
+
+interface Sale {
+  id?: number;
+  date: string;
+  total: number;
+  paymentMethod: string;
+  items?: any[];
+}
+
+interface Expense {
+  id?: number;
+  date: string;
+  description: string;
+  amount: number;
+  category: string;
+}
+
 class ApiService {
   private token: string | null = null;
   private user: AuthResponse | null = null;
@@ -121,6 +163,151 @@ class ApiService {
       return await this.handleResponse<any>(response);
     } catch (error) {
       console.error('GetStats error:', error);
+      return { success: false, message: 'Erreur de connexion au serveur' };
+    }
+  }
+
+  async getClients(): Promise<ApiResponse<Client[]>> {
+    await this.waitUntilReady();
+    try {
+      const response = await fetch(`${API_BASE_URL}/clients`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+      return await this.handleResponse<Client[]>(response);
+    } catch (error) {
+      console.error('GetClients error:', error);
+      return { success: false, message: 'Erreur de connexion au serveur' };
+    }
+  }
+
+  async createClient(data: Client): Promise<ApiResponse<Client>> {
+    await this.waitUntilReady();
+    try {
+      const response = await fetch(`${API_BASE_URL}/clients`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(data),
+      });
+      return await this.handleResponse<Client>(response);
+    } catch (error) {
+      console.error('CreateClient error:', error);
+      return { success: false, message: 'Erreur de connexion au serveur' };
+    }
+  }
+
+  async getProducts(): Promise<ApiResponse<Product[]>> {
+    await this.waitUntilReady();
+    try {
+      const response = await fetch(`${API_BASE_URL}/products`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+      return await this.handleResponse<Product[]>(response);
+    } catch (error) {
+      console.error('GetProducts error:', error);
+      return { success: false, message: 'Erreur de connexion au serveur' };
+    }
+  }
+
+  async createProduct(data: Product): Promise<ApiResponse<Product>> {
+    await this.waitUntilReady();
+    try {
+      const response = await fetch(`${API_BASE_URL}/products`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(data),
+      });
+      return await this.handleResponse<Product>(response);
+    } catch (error) {
+      console.error('CreateProduct error:', error);
+      return { success: false, message: 'Erreur de connexion au serveur' };
+    }
+  }
+
+  async getSales(): Promise<ApiResponse<Sale[]>> {
+    await this.waitUntilReady();
+    try {
+      const response = await fetch(`${API_BASE_URL}/sales`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+      return await this.handleResponse<Sale[]>(response);
+    } catch (error) {
+      console.error('GetSales error:', error);
+      return { success: false, message: 'Erreur de connexion au serveur' };
+    }
+  }
+
+  async createSale(data: any): Promise<ApiResponse<Sale>> {
+    await this.waitUntilReady();
+    try {
+      const response = await fetch(`${API_BASE_URL}/sales`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(data),
+      });
+      return await this.handleResponse<Sale>(response);
+    } catch (error) {
+      console.error('CreateSale error:', error);
+      return { success: false, message: 'Erreur de connexion au serveur' };
+    }
+  }
+
+  async getSuppliers(): Promise<ApiResponse<Supplier[]>> {
+    await this.waitUntilReady();
+    try {
+      const response = await fetch(`${API_BASE_URL}/suppliers`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+      return await this.handleResponse<Supplier[]>(response);
+    } catch (error) {
+      console.error('GetSuppliers error:', error);
+      return { success: false, message: 'Erreur de connexion au serveur' };
+    }
+  }
+
+  async createSupplier(data: Supplier): Promise<ApiResponse<Supplier>> {
+    await this.waitUntilReady();
+    try {
+      const response = await fetch(`${API_BASE_URL}/suppliers`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(data),
+      });
+      return await this.handleResponse<Supplier>(response);
+    } catch (error) {
+      console.error('CreateSupplier error:', error);
+      return { success: false, message: 'Erreur de connexion au serveur' };
+    }
+  }
+
+  async getExpenses(): Promise<ApiResponse<Expense[]>> {
+    await this.waitUntilReady();
+    try {
+      const response = await fetch(`${API_BASE_URL}/expenses`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+      return await this.handleResponse<Expense[]>(response);
+    } catch (error) {
+      console.error('GetExpenses error:', error);
+      return { success: false, message: 'Erreur de connexion au serveur' };
+    }
+  }
+
+  async createExpense(data: Expense): Promise<ApiResponse<Expense>> {
+    await this.waitUntilReady();
+    try {
+      const response = await fetch(`${API_BASE_URL}/expenses`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(data),
+      });
+      return await this.handleResponse<Expense>(response);
+    } catch (error) {
+      console.error('CreateExpense error:', error);
       return { success: false, message: 'Erreur de connexion au serveur' };
     }
   }

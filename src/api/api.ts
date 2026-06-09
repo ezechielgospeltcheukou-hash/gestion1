@@ -1,8 +1,4 @@
-import * as SecureStore from 'expo-secure-store';
-
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://comptabilite-production-08f2.up.railway.app/api';
-const TOKEN_KEY = 'comptabilite_token';
-const USER_KEY = 'comptabilite_user';
 
 interface ApiResponse<T> {
   data?: T;
@@ -37,20 +33,7 @@ class ApiService {
   private readyPromise: Promise<void>;
 
   constructor() {
-    this.readyPromise = this.init();
-  }
-
-  private async init() {
-    try {
-      const [token, userStr] = await Promise.all([
-        SecureStore.getItemAsync(TOKEN_KEY),
-        SecureStore.getItemAsync(USER_KEY)
-      ]);
-      this.token = token;
-      this.user = userStr ? JSON.parse(userStr) : null;
-    } catch (error) {
-      console.error('Error loading from storage:', error);
-    }
+    this.readyPromise = Promise.resolve();
   }
 
   async waitUntilReady(): Promise<void> {
@@ -91,8 +74,6 @@ class ApiService {
       if (result.success && result.data) {
         this.token = result.data.token;
         this.user = result.data;
-        await SecureStore.setItemAsync(TOKEN_KEY, result.data.token);
-        await SecureStore.setItemAsync(USER_KEY, JSON.stringify(result.data));
       }
       return result;
     } catch (error) {
@@ -117,8 +98,6 @@ class ApiService {
       if (result.success && result.data) {
         this.token = result.data.token;
         this.user = result.data;
-        await SecureStore.setItemAsync(TOKEN_KEY, result.data.token);
-        await SecureStore.setItemAsync(USER_KEY, JSON.stringify(result.data));
       }
       return result;
     } catch (error) {
@@ -130,8 +109,6 @@ class ApiService {
   async logout() {
     this.token = null;
     this.user = null;
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
-    await SecureStore.deleteItemAsync(USER_KEY);
   }
 
   async getStats(): Promise<ApiResponse<any>> {

@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Image, StatusBar } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Image, StatusBar, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { 
   ShoppingCart, 
@@ -24,37 +24,25 @@ import {
   MessageSquare,
   HelpCircle
 } from 'lucide-react-native';
-import { 
-  getStats, 
-  getCurrency, 
-  getLowStockCount, 
-  getAllSettings, 
-  isAdmin, 
-  getUserPermissions, 
-  UserPermissions 
-} from '../../src/database/database';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { updateSetting, getUser } from '../../src/database/database';
-import { Alert } from 'react-native';
+import { api } from '../../src/api/api';
 
 interface MenuItem {
   id: string;
   title: string;
   icon: React.ReactNode;
   route: string;
-  permission?: keyof UserPermissions;
 }
 
 export default function Dashboard() {
   const router = useRouter();
   const [stats, setStats] = useState<any>(null);
-  const [currency, setCurrency] = useState('€');
-  const [lowStockCount, setLowStockCount] = useState(0);
-  const [shopName, setShopName] = useState('Comptabilité Chrétiens');
-  const [permissions, setPermissions] = useState<UserPermissions | null>(null);
+  const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const currency = '€';
+  const shopName = 'Comptabilité Chrétiens';
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     Alert.alert(
       'Déconnexion',
       'Êtes-vous sûr de vouloir vous déconnecter ?',
@@ -63,8 +51,8 @@ export default function Dashboard() {
         {
           text: 'Se déconnecter',
           style: 'destructive',
-          onPress: () => {
-            updateSetting('currentUserId', '');
+          onPress: async () => {
+            await api.logout();
             router.replace('/(auth)/login');
           }
         }
@@ -72,15 +60,25 @@ export default function Dashboard() {
     );
   };
 
-  const fetchData = useCallback(() => {
-    setStats(getStats());
-    setCurrency(getCurrency());
-    setLowStockCount(getLowStockCount());
-    setPermissions(getUserPermissions());
-    setCurrentUser(getUser());
-    const settings = getAllSettings();
-    if (settings.shopName) setShopName(settings.shopName);
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const statsResponse = await api.getStats();
+      if (statsResponse.success) {
+        setStats(statsResponse.data);
+      }
+      const user = await api.getUser();
+      setCurrentUser(user);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   useFocusEffect(
     useCallback(() => {
@@ -88,27 +86,31 @@ export default function Dashboard() {
     }, [fetchData])
   );
 
-  const hasPermission = (perm: keyof UserPermissions) => {
-    if (isAdmin()) return true;
-    return permissions ? permissions[perm] : false;
-  };
+  const isAdmin = currentUser?.role === 'ADMIN';
 
   const menuItems: MenuItem[] = [
-    { id: 'sales', title: 'VENTES', icon: <ShoppingCart size={40} color="#3b82f6" />, route: '/sales', permission: 'can_view_sales' },
-    { id: 'expenses', title: 'DECAISSEMENT', icon: <Receipt size={40} color="#ef4444" />, route: '/expenses', permission: 'can_view_expenses' },
-    { id: 'inventory', title: 'STOCK', icon: <Package size={40} color="#f59e0b" />, route: '/inventory', permission: 'can_view_products' },
-    { id: 'reports', title: 'BILAN', icon: <PieChart size={40} color="#10b981" />, route: '/reports', permission: 'can_view_reports' },
-    { id: 'cash', title: 'CAISSE', icon: <DollarSign size={40} color="#059669" />, route: '/cash', permission: 'can_view_cash' },
+    { id: 'sales', title: 'VENTES', icon: <ShoppingCart size={40} color="#3b82f6" />, route: '/sales' },
+    { id: 'expenses', title: 'DECAISSEMENT', icon: <Receipt size={40} color="#ef4444" />, route: '/expenses' },
+    { id: 'inventory', title: 'STOCK', icon: <Package size={40} color="#f59e0b" />, route: '/inventory' },
+    { id: 'reports', title: 'BILAN', icon: <PieChart size={40} color="#10b981" />, route: '/reports' },
+    { id: 'cash', title: 'CAISSE', icon: <DollarSign size={40} color="#059669" />, route: '/cash' },
     { id: 'invoices', title: 'FACTURES', icon: <FileText size={40} color="#3b82f6" />, route: '/invoices' },
     { id: 'appointments', title: 'RENDEZ-VOUS', icon: <Calendar size={40} color="#8b5cf6" />, route: '/appointments' },
     { id: 'chat', title: 'MESSAGES', icon: <MessageSquare size={40} color="#3b82f6" />, route: '/chat-list' },
-    { id: 'benefit_expenses', title: 'DEPENSE SUR BENEFICE', icon: <TrendingDown size={40} color="#db2777" />, route: '/expenses', permission: 'can_view_expenses' },
-    { id: 'client_credits', title: 'Crédit Client', icon: <Users size={40} color="#6366f1" />, route: '/credits', permission: 'can_view_credits' },
-    { id: 'supplier_credits', title: 'Crédit Fournisseur', icon: <Truck size={40} color="#4b5563" />, route: '/credits', permission: 'can_view_credits' },
-    ...(isAdmin() ? [{ id: 'employees', title: 'EMPLOYES', icon: <UserIcon size={40} color="#059669" />, route: '/employees' }] : []),
+    { id: 'benefit_expenses', title: 'DEPENSE SUR BENEFICE', icon: <TrendingDown size={40} color="#db2777" />, route: '/expenses' },
+    { id: 'client_credits', title: 'Crédit Client', icon: <Users size={40} color="#6366f1" />, route: '/credits' },
+    { id: 'supplier_credits', title: 'Crédit Fournisseur', icon: <Truck size={40} color="#4b5563" />, route: '/credits' },
+    ...(isAdmin ? [{ id: 'employees', title: 'EMPLOYES', icon: <UserIcon size={40} color="#059669" />, route: '/employees' }] : []),
   ];
 
-  const visibleMenuItems = menuItems.filter(item => !item.permission || hasPermission(item.permission));
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#059669" />
+        <Text style={styles.loadingText}>Chargement...</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -144,7 +146,7 @@ export default function Dashboard() {
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Banner Section */}
-        {isAdmin() && (
+        {isAdmin && (
           <View style={styles.bannerContainer}>
             <View style={styles.bannerOverlay}>
               <View style={styles.quickStats}>
@@ -152,7 +154,7 @@ export default function Dashboard() {
                   <ArrowUpRight size={16} color="#34d399" />
                   <Text style={styles.quickStatLabel}>Profit Net</Text>
                   <Text style={styles.quickStatValue}>
-                    {stats ? stats.netProfit.toFixed(2) : '0.00'} {currency}
+                    {stats ? (stats.netProfit || 0).toFixed(2) : '0.00'} {currency}
                   </Text>
                 </View>
                 <View style={styles.quickStatDivider} />
@@ -160,7 +162,7 @@ export default function Dashboard() {
                   <ArrowDownRight size={16} color="#fb7185" />
                   <Text style={styles.quickStatLabel}>Dépenses</Text>
                   <Text style={styles.quickStatValue}>
-                    {stats ? stats.expenses.toFixed(2) : '0.00'} {currency}
+                    {stats ? (stats.expenses || 0).toFixed(2) : '0.00'} {currency}
                   </Text>
                 </View>
               </View>
@@ -173,22 +175,9 @@ export default function Dashboard() {
           </View>
         )}
 
-        {(hasPermission('can_view_products') && lowStockCount > 0) && (
-          <TouchableOpacity 
-            style={styles.alertCard}
-            onPress={() => router.push('/inventory')}
-          >
-            <AlertTriangle color="#ef4444" size={20} />
-            <Text style={styles.alertText}>
-              {lowStockCount} {lowStockCount === 1 ? 'produit est' : 'produits sont'} en rupture de stock !
-            </Text>
-            <Package color="#ef4444" size={16} />
-          </TouchableOpacity>
-        )}
-
         {/* Menu Grid */}
         <View style={styles.grid}>
-          {visibleMenuItems.map((item) => (
+          {menuItems.map((item) => (
             <TouchableOpacity 
               key={item.id} 
               style={styles.gridItem}
@@ -204,7 +193,7 @@ export default function Dashboard() {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>{shopName} v1.4.0</Text>
-          {!isAdmin() && <Text style={styles.footerText}>Mode Employé</Text>}
+          {!isAdmin && <Text style={styles.footerText}>Mode Employé</Text>}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -213,6 +202,8 @@ export default function Dashboard() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f3f4f6' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f3f4f6' },
+  loadingText: { marginTop: 10, color: '#6b7280' },
   header: { 
     height: 60, 
     backgroundColor: '#059669', 
@@ -264,23 +255,6 @@ const styles = StyleSheet.create({
   quickStatDivider: { width: 1, height: '100%', backgroundColor: '#f3f4f6' },
   quickStatLabel: { fontSize: 12, color: '#6b7280', marginTop: 4 },
   quickStatValue: { fontSize: 16, fontWeight: 'bold', color: '#111827', marginTop: 2 },
-  alertCard: {
-    backgroundColor: '#fef2f2',
-    margin: 15,
-    padding: 12,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#fecaca',
-  },
-  alertText: {
-    flex: 1,
-    color: '#b91c1c',
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginHorizontal: 10,
-  },
   grid: { 
     flexDirection: 'row', 
     flexWrap: 'wrap', 

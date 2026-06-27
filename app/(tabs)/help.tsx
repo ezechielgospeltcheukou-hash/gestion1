@@ -3,24 +3,26 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Clock } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { useThemeColors } from '../../src/theme/ThemeContext';
 
-export default function CreditsScreen() {
+export default function HelpScreen() {
   const router = useRouter();
+  const colors = useThemeColors();
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <ArrowLeft size={24} color="white" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Crédits</Text>
+        <Text style={styles.headerTitle}>Aide</Text>
         <View style={{ width: 24 }} />
       </View>
 
       <View style={styles.content}>
         <Clock size={64} color="#059669" />
-        <Text style={styles.title}>En cours de développement</Text>
-        <Text style={styles.subtitle}>
+        <Text style={[styles.title, { color: colors.text }]}>En cours de développement</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           Cette fonctionnalité sera disponible très bientôt !
         </Text>
       </View>

@@ -72,12 +72,4 @@ app.get('/api/health', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Serveur backend en écoute sur http://localhost:${PORT}`);
-  console.log('Santé: http://localhost:${PORT}/api/health');
-  console.log('');
-  console.log('Configuration SendGrid requise:');
-  console.log('  SENDGRID_API_KEY=votre_cle_api');
-  console.log('  SENDGRID_FROM_EMAIL=votre@email.com');
-  console.log('');
-  console.log('Ou utilisez le mode démo sans SendGrid !');
 });

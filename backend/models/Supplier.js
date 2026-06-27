@@ -44,7 +44,12 @@ const Supplier = sequelize.define('Supplier', {
   }
 }, {
   timestamps: true,
-  tableName: 'suppliers'
+  tableName: 'suppliers',
+  indexes: [
+    { fields: ['name'] },
+    { fields: ['isActive'] },
+    { fields: ['createdBy'] },
+  ]
 });
 
 module.exports = Supplier;

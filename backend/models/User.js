@@ -30,12 +30,21 @@ const User = sequelize.define('User', {
     defaultValue: 'EMPLOYEE',
     allowNull: false
   },
+  employeeCode: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    unique: true
+  },
   phone: {
     type: DataTypes.STRING,
     allowNull: true
   },
   address: {
     type: DataTypes.TEXT,
+    allowNull: true
+  },
+  locality: {
+    type: DataTypes.STRING,
     allowNull: true
   },
   salary: {
@@ -53,16 +62,51 @@ const User = sequelize.define('User', {
   avatar: {
     type: DataTypes.STRING,
     allowNull: true
+  },
+  permissions: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: {
+      sales: true,
+      inventory: true,
+      clients: true,
+      suppliers: true,
+      expenses: true,
+      invoices: true,
+      cash: true,
+      reports: true,
+      appointments: true,
+      credits: true,
+      messages: true,
+      employees: false
+    }
   }
 }, {
   timestamps: true,
-  tableName: 'users'
+  tableName: 'users',
+  indexes: [
+    { fields: ['username'] },
+    { fields: ['role'] },
+    { fields: ['isActive'] },
+    { fields: ['employeeCode'], unique: true },
+  ]
 });
 
 User.beforeCreate(async (user) => {
   if (user.password) {
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(user.password, salt);
+  }
+  // Auto-generate employee code for employees
+  if (user.role === 'EMPLOYEE' && !user.employeeCode) {
+    const lastUser = await User.findOne({
+      order: [['id', 'DESC']],
+      where: { role: 'EMPLOYEE' }
+    });
+    const nextNum = lastUser && lastUser.employeeCode
+      ? parseInt(lastUser.employeeCode.replace('EMP-', '')) + 1
+      : 1;
+    user.employeeCode = `EMP-${String(nextNum).padStart(3, '0')}`;
   }
 });
 

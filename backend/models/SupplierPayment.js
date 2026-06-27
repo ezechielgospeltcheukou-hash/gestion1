@@ -37,7 +37,11 @@ const SupplierPayment = sequelize.define('SupplierPayment', {
   }
 }, {
   timestamps: true,
-  tableName: 'supplier_payments'
+  tableName: 'supplier_payments',
+  indexes: [
+    { fields: ['supplierId'] },
+    { fields: ['createdAt'] },
+  ]
 });
 
 module.exports = SupplierPayment;

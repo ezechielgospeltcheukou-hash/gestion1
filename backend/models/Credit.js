@@ -37,7 +37,13 @@ const Credit = sequelize.define('Credit', {
   }
 }, {
   timestamps: true,
-  tableName: 'credits'
+  tableName: 'credits',
+  indexes: [
+    { fields: ['personId'] },
+    { fields: ['personType'] },
+    { fields: ['isRepaid'] },
+    { fields: ['createdAt'] },
+  ]
 });
 
 module.exports = Credit;

@@ -8,11 +8,12 @@ const {
   getSalesStats
 } = require('../controllers/saleController');
 const { protect, authorize } = require('../middleware/auth');
+const { saleValidation, paginationValidation } = require('../middleware/validation');
 
-router.get('/', protect, getSales);
+router.get('/', protect, paginationValidation, getSales);
 router.get('/stats', protect, getSalesStats);
 router.get('/:id', protect, getSaleById);
-router.post('/', protect, createSale);
+router.post('/', protect, saleValidation.create, createSale);
 router.delete('/:id', protect, authorize('ADMIN'), deleteSale);
 
 module.exports = router;

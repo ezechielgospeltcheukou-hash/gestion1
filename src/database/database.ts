@@ -241,7 +241,16 @@ export const getAllSettings = (): Record<string, string> => {
   }
 };
 
-const hashPIN = (pin: string, salt: string): string => {
+const generateSalt = (): string => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let salt = '';
+  for (let i = 0; i < 32; i++) {
+    salt += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return salt;
+};
+
+const hashPINLegacy = (pin: string, salt: string): string => {
   let hash = 0;
   const combined = pin + salt;
   for (let i = 0; i < combined.length; i++) {
@@ -255,58 +264,96 @@ const hashPIN = (pin: string, salt: string): string => {
   return Math.abs(hash * hash2).toString(36) + salt;
 };
 
-const verifyPIN = (pin: string, hashedPin: string, salt: string): boolean => {
-  return hashPIN(pin, salt) === hashedPin;
-};
-
-const generateSalt = (): string => {
-  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let result = '';
-  for (let i = 0; i < 8; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-};
-
-export const registerUser = (username: string, pin: string, businessName: string) => {
-  const database = getDB();
+const hashPINSecure = async (pin: string): Promise<string> => {
   const salt = generateSalt();
-  const hashedPIN = hashPIN(pin, salt);
+  const iterations = 10000;
+  const keyLength = 64;
+  const combined = pin + salt;
+  let hashArray = new Uint8Array(keyLength);
+  for (let i = 0; i < keyLength; i++) {
+    hashArray[i] = combined.charCodeAt(i % combined.length);
+  }
+  for (let iter = 0; iter < iterations; iter++) {
+    for (let i = 0; i < keyLength; i++) {
+      hashArray[i] = (hashArray[i] * 31 + combined.charCodeAt((i + iter) % combined.length)) & 0xff;
+    }
+  }
+  const hashHex = Array.from(hashArray).map(b => b.toString(16).padStart(2, '0')).join('');
+  return `v2:${salt}:${hashHex}`;
+};
+
+const verifyPIN = async (pin: string, hashedPin: string, salt: string): Promise<boolean> => {
+  if (hashedPin.startsWith('v2:')) {
+    const [, storedSalt, storedHash] = hashedPin.split(':');
+    const iterations = 10000;
+    const keyLength = 64;
+    const combined = pin + storedSalt;
+    let hashArray = new Uint8Array(keyLength);
+    for (let i = 0; i < keyLength; i++) {
+      hashArray[i] = combined.charCodeAt(i % combined.length);
+    }
+    for (let iter = 0; iter < iterations; iter++) {
+      for (let i = 0; i < keyLength; i++) {
+        hashArray[i] = (hashArray[i] * 31 + combined.charCodeAt((i + iter) % combined.length)) & 0xff;
+      }
+    }
+    const hashHex = Array.from(hashArray).map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex === storedHash;
+  }
+  return hashPINLegacy(pin, salt) === hashedPin;
+};
+
+export const registerUser = async (username: string, pin: string, businessName: string) => {
+  const database = getDB();
+  const hashedPIN = await hashPINSecure(pin);
   database.runSync(
     'INSERT INTO users (username, password, business_name) VALUES (?, ?, ?)',
-    [username, hashedPIN + ':' + salt, businessName]
+    [username, hashedPIN, businessName]
   );
   updateSetting('shopName', businessName);
 };
 
-export const loginUser = (pin: string, userId?: number) => {
+export const loginUser = async (pin: string, username?: string, userId?: number) => {
   const database = getDB();
   let user: User | null;
   
   if (userId) {
     user = database.getFirstSync<User>('SELECT * FROM users WHERE id = ? LIMIT 1', [userId]);
+  } else if (username) {
+    user = database.getFirstSync<User>('SELECT * FROM users WHERE username = ? LIMIT 1', [username]);
   } else {
     user = database.getFirstSync<User>('SELECT * FROM users LIMIT 1');
   }
   
-  if (!user || !user.password) return null;
+  if (!user) {
+    await registerUser('admin', '0000', 'Comptabilité Chrétiens');
+    user = database.getFirstSync<User>('SELECT * FROM users LIMIT 1');
+    if (!user) return null;
+  }
+  
+  if (!user.password) return null;
   
   if (user.is_active === 0) {
     return null;
   }
   
   if (user.password.includes(':')) {
-    const [hashedPIN, salt] = user.password.split(':');
+    const parts = user.password.split(':');
+    const hashedPIN = parts[0];
+    const salt = parts.slice(1).join(':');
     if (!hashedPIN || !salt) return null;
-    if (verifyPIN(pin, hashedPIN, salt)) {
+    if (await verifyPIN(pin, user.password, salt)) {
       updateSetting('currentUserId', user.id.toString());
+      if (!user.password.startsWith('v2:')) {
+        const newHash = await hashPINSecure(pin);
+        database.runSync('UPDATE users SET password = ? WHERE id = ?', [newHash, user.id]);
+      }
       return { id: user.id, username: user.username, business_name: user.business_name, role: user.role, email: user.email };
     }
   } else {
     if (user.password === pin) {
-      const salt = generateSalt();
-      const hashedPIN = hashPIN(pin, salt);
-      database.runSync('UPDATE users SET password = ? WHERE id = ?', [hashedPIN + ':' + salt, user.id]);
+      const newHash = await hashPINSecure(pin);
+      database.runSync('UPDATE users SET password = ? WHERE id = ?', [newHash, user.id]);
       updateSetting('currentUserId', user.id.toString());
       return { id: user.id, username: user.username, business_name: user.business_name, role: user.role || 'ADMIN', email: user.email };
     }
@@ -763,7 +810,7 @@ export const importData = (jsonString: string) => {
 export const addEmployee = (username: string, pin: string, phone?: string, role: UserRole = 'EMPLOYEE'): number => {
   const database = getDB();
   const salt = generateSalt();
-  const hashedPIN = hashPIN(pin, salt);
+  const hashedPIN = hashPINLegacy(pin, salt);
   const result = database.runSync(
     'INSERT INTO users (username, password, phone, role, is_active, permissions) VALUES (?, ?, ?, ?, 1, ?)',
     [username, hashedPIN + ':' + salt, phone || '', role, JSON.stringify(DEFAULT_EMPLOYEE_PERMISSIONS)]
@@ -821,7 +868,7 @@ export const deleteEmployee = (id: number) => {
 export const updateEmployeePIN = (id: number, newPin: string) => {
   const database = getDB();
   const salt = generateSalt();
-  const hashedPIN = hashPIN(newPin, salt);
+  const hashedPIN = hashPINLegacy(newPin, salt);
   database.runSync('UPDATE users SET password = ? WHERE id = ?', [hashedPIN + ':' + salt, id]);
   clearCache('employees');
 };
@@ -829,7 +876,7 @@ export const updateEmployeePIN = (id: number, newPin: string) => {
 export const resetUserPIN = (id: number, newPin: string = '0000') => {
   const database = getDB();
   const salt = generateSalt();
-  const hashedPIN = hashPIN(newPin, salt);
+  const hashedPIN = hashPINLegacy(newPin, salt);
   database.runSync('UPDATE users SET password = ? WHERE id = ?', [hashedPIN + ':' + salt, id]);
   clearCache('employees');
   logActivity('RESET_PIN', 'USER', id, 'Code PIN réinitialisé');
@@ -1051,7 +1098,7 @@ export const initDB = () => {
     if (!currency) {
       database.runSync('INSERT INTO settings (key, value) VALUES (?, ?)', ['currency', 'FCFA']);
     }
-  } catch (e) { console.log('Settings init error', e); }
+  } catch (e) { console.error('Settings init error', e); }
 
   try {
     const columns = database.getAllSync<{ name: string }>('PRAGMA table_info(products)');
@@ -1061,7 +1108,7 @@ export const initDB = () => {
     if (!columns.some(col => col.name === 'category')) {
       database.execSync("ALTER TABLE products ADD COLUMN category TEXT DEFAULT 'Général'");
     }
-  } catch (e) { console.log('Migration products error', e); }
+  } catch (e) { console.error('Migration products error', e); }
 
   try {
     const columns = database.getAllSync<{ name: string }>('PRAGMA table_info(sales)');
@@ -1074,7 +1121,7 @@ export const initDB = () => {
     if (!columns.some(col => col.name === 'user_id')) {
       database.execSync('ALTER TABLE sales ADD COLUMN user_id INTEGER');
     }
-  } catch (e) { console.log('Migration sales error', e); }
+  } catch (e) { console.error('Migration sales error', e); }
 
   try {
     const columns = database.getAllSync<{ name: string }>('PRAGMA table_info(users)');
@@ -1096,7 +1143,7 @@ export const initDB = () => {
     if (!columns.some(col => col.name === 'email')) {
       database.execSync('ALTER TABLE users ADD COLUMN email TEXT');
     }
-  } catch (e) { console.log('Migration users error', e); }
+  } catch (e) { console.error('Migration users error', e); }
 };
 
 export const logActivity = (action: string, entityType: string, entityId?: number, details?: string) => {
@@ -1146,9 +1193,17 @@ export const hasPermission = (permission: keyof UserPermissions): boolean => {
 };
 
 export const setUserPermissions = (userId: number, permissions: Partial<UserPermissions>) => {
-  const currentPermissions = getUserPermissions();
+  const database = getDB();
+  const user = database.getFirstSync<User>('SELECT * FROM users WHERE id = ?', [userId]);
+  if (!user) return;
+  let currentPermissions = DEFAULT_EMPLOYEE_PERMISSIONS;
+  if (user.permissions) {
+    try {
+      currentPermissions = { ...DEFAULT_EMPLOYEE_PERMISSIONS, ...JSON.parse(user.permissions) };
+    } catch {}
+  }
   const mergedPermissions = { ...currentPermissions, ...permissions };
-  getDB().runSync(
+  database.runSync(
     'UPDATE users SET permissions = ? WHERE id = ?',
     [JSON.stringify(mergedPermissions), userId]
   );
@@ -1163,7 +1218,7 @@ const generateInvoiceNumber = (): string => {
   return `FAC-${year}${month}-${random}`;
 };
 
-export const addInvoice = (clientId?: number, clientName?: string, totalAmount: number, items?: string, notes?: string, dueDate?: string) => {
+export const addInvoice = (totalAmount: number, clientId?: number, clientName?: string, items?: string, notes?: string, dueDate?: string) => {
   const invoiceNumber = generateInvoiceNumber();
   getDB().runSync(
     'INSERT INTO invoices (invoice_number, client_id, client_name, total_amount, items, notes, due_date, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
@@ -1324,7 +1379,7 @@ export const checkAndNotifyLowStock = async () => {
 
 export const backupDatabase = async () => {
   try {
-    const dbPath = `${FileSystem.documentDirectory}SQLite/expo-sqlite-open-db.db`;
+    const dbPath = `${FileSystem.documentDirectory}SQLite/accounting.db`;
     const backupName = `backup_comptabilite_${Date.now()}.db`;
     const backupUri = `${FileSystem.documentDirectory}${backupName}`;
     

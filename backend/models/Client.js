@@ -26,6 +26,14 @@ const Client = sequelize.define('Client', {
     type: DataTypes.TEXT,
     allowNull: true
   },
+  whatsapp: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  notes: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
   balance: {
     type: DataTypes.DECIMAL(15, 2),
     defaultValue: 0
@@ -40,7 +48,12 @@ const Client = sequelize.define('Client', {
   }
 }, {
   timestamps: true,
-  tableName: 'clients'
+  tableName: 'clients',
+  indexes: [
+    { fields: ['name'] },
+    { fields: ['isActive'] },
+    { fields: ['createdBy'] },
+  ]
 });
 
 module.exports = Client;

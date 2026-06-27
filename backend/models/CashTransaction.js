@@ -33,7 +33,12 @@ const CashTransaction = sequelize.define('CashTransaction', {
   }
 }, {
   timestamps: true,
-  tableName: 'cash_transactions'
+  tableName: 'cash_transactions',
+  indexes: [
+    { fields: ['type'] },
+    { fields: ['createdAt'] },
+    { fields: ['createdBy'] },
+  ]
 });
 
 module.exports = CashTransaction;

@@ -10,13 +10,14 @@ const {
   getSupplierPayments
 } = require('../controllers/supplierController');
 const { protect, authorize } = require('../middleware/auth');
+const { supplierValidation, paginationValidation } = require('../middleware/validation');
 
-router.get('/', protect, getSuppliers);
+router.get('/', protect, paginationValidation, getSuppliers);
+router.post('/payment', protect, authorize('ADMIN'), recordSupplierPayment);
+router.get('/:supplierId/payments', protect, paginationValidation, getSupplierPayments);
 router.get('/:id', protect, getSupplierById);
-router.post('/', protect, authorize('ADMIN'), createSupplier);
+router.post('/', protect, authorize('ADMIN'), supplierValidation.create, createSupplier);
 router.put('/:id', protect, authorize('ADMIN'), updateSupplier);
 router.delete('/:id', protect, authorize('ADMIN'), deleteSupplier);
-router.post('/payment', protect, authorize('ADMIN'), recordSupplierPayment);
-router.get('/:supplierId/payments', protect, getSupplierPayments);
 
 module.exports = router;

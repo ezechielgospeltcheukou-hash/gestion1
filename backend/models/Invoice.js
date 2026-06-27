@@ -46,7 +46,13 @@ const Invoice = sequelize.define('Invoice', {
   }
 }, {
   timestamps: true,
-  tableName: 'invoices'
+  tableName: 'invoices',
+  indexes: [
+    { fields: ['clientId'] },
+    { fields: ['status'] },
+    { fields: ['createdAt'] },
+    { fields: ['createdBy'] },
+  ]
 });
 
 module.exports = Invoice;

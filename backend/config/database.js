@@ -14,11 +14,11 @@ const getDatabaseUrl = () => {
     DB_NAME = 'comptabilite_db'
   } = process.env;
 
-  if (!DB_USER || !DB_PASSWORD || !DB_HOST || !DB_PORT || !DB_NAME) {
-    throw new Error('Missing database configuration. Set DATABASE_URL or DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD.');
+  if (!DB_USER || !DB_HOST || !DB_PORT || !DB_NAME) {
+    throw new Error('Missing database configuration. Set DATABASE_URL or DB_HOST/DB_PORT/DB_NAME/DB_USER.');
   }
 
-  return `postgres://${DB_USER}:${encodeURIComponent(DB_PASSWORD)}@${DB_HOST}:${DB_PORT}/${DB_NAME}`;
+  return `postgres://${DB_USER}:${DB_PASSWORD ? encodeURIComponent(DB_PASSWORD) : ''}@${DB_HOST}:${DB_PORT}/${DB_NAME}`;
 };
 
 const connectionString = getDatabaseUrl();
@@ -27,14 +27,16 @@ const sequelize = new Sequelize(connectionString, {
   dialect: 'postgres',
   protocol: 'postgres',
   logging: false,
-  dialectOptions: process.env.DATABASE_URL || process.env.DB_SSL === 'true'
+  dialectOptions: process.env.DATABASE_URL && process.env.DATABASE_URL !== ''
     ? {
       ssl: {
         require: true,
         rejectUnauthorized: false
       }
     }
-    : undefined
+    : process.env.DB_SSL === 'true'
+      ? { ssl: { require: true, rejectUnauthorized: false } }
+      : undefined
 });
 
 module.exports = sequelize;

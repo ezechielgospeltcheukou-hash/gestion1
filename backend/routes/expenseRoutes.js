@@ -9,11 +9,12 @@ const {
   getExpensesStats
 } = require('../controllers/expenseController');
 const { protect, authorize } = require('../middleware/auth');
+const { expenseValidation, paginationValidation } = require('../middleware/validation');
 
-router.get('/', protect, getExpenses);
+router.get('/', protect, paginationValidation, getExpenses);
 router.get('/stats', protect, getExpensesStats);
 router.get('/:id', protect, getExpenseById);
-router.post('/', protect, authorize('ADMIN'), createExpense);
+router.post('/', protect, authorize('ADMIN'), expenseValidation.create, createExpense);
 router.put('/:id', protect, authorize('ADMIN'), updateExpense);
 router.delete('/:id', protect, authorize('ADMIN'), deleteExpense);
 

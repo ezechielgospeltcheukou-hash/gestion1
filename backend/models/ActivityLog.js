@@ -33,7 +33,12 @@ const ActivityLog = sequelize.define('ActivityLog', {
   }
 }, {
   timestamps: true,
-  tableName: 'activity_logs'
+  tableName: 'activity_logs',
+  indexes: [
+    { fields: ['userId'] },
+    { fields: ['action'] },
+    { fields: ['createdAt'] },
+  ]
 });
 
 module.exports = ActivityLog;

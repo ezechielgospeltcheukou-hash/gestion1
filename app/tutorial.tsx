@@ -64,7 +64,7 @@ export default function TutorialScreen() {
     if (currentStep < TUTORIAL_STEPS.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      router.replace('/');
+      router.replace('/(auth)');
     }
   };
 
@@ -75,7 +75,7 @@ export default function TutorialScreen() {
   };
 
   const skipToEnd = () => {
-    router.replace('/');
+    router.replace('/(auth)');
   };
 
   const step = TUTORIAL_STEPS[currentStep];

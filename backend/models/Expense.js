@@ -31,13 +31,23 @@ const Expense = sequelize.define('Expense', {
     type: DataTypes.ENUM('Espèces', 'Orange Money', 'MTN Mobile Money', 'Moov Money', 'Carte Bancaire'),
     defaultValue: 'Espèces'
   },
+  notes: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
   createdBy: {
     type: DataTypes.INTEGER,
     allowNull: true
   }
 }, {
   timestamps: true,
-  tableName: 'expenses'
+  tableName: 'expenses',
+  indexes: [
+    { fields: ['category'] },
+    { fields: ['date'] },
+    { fields: ['createdBy'] },
+    { fields: ['createdAt'] },
+  ]
 });
 
 module.exports = Expense;

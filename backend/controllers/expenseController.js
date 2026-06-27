@@ -3,13 +3,19 @@ const sequelize = require('../config/database');
 
 const getExpenses = async (req, res) => {
   try {
-    const expenses = await Expense.findAll({
-      order: [['date', 'DESC']]
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const offset = (page - 1) * limit;
+
+    const { count, rows } = await Expense.findAndCountAll({
+      order: [['date', 'DESC']],
+      limit,
+      offset
     });
-    res.json(expenses);
+    res.json({ success: true, data: rows, pagination: { page, limit, total: count, totalPages: Math.ceil(count / limit) } });
   } catch (error) {
     console.error('Erreur getExpenses:', error);
-    res.status(500).json({ message: 'Erreur serveur' });
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
 
@@ -17,12 +23,12 @@ const getExpenseById = async (req, res) => {
   try {
     const expense = await Expense.findByPk(req.params.id);
     if (!expense) {
-      return res.status(404).json({ message: 'Dépense non trouvée' });
+      return res.status(404).json({ success: false, message: 'Dépense non trouvée' });
     }
-    res.json(expense);
+    res.json({ success: true, data: expense });
   } catch (error) {
     console.error('Erreur getExpenseById:', error);
-    res.status(500).json({ message: 'Erreur serveur' });
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
 
@@ -31,7 +37,7 @@ const createExpense = async (req, res) => {
     const { description, amount, category, date, paymentMethod, notes } = req.body;
 
     if (!description || !amount) {
-      return res.status(400).json({ message: 'Veuillez fournir description et montant' });
+      return res.status(400).json({ success: false, message: 'Veuillez fournir description et montant' });
     }
 
     const expense = await Expense.create({
@@ -44,10 +50,10 @@ const createExpense = async (req, res) => {
       createdBy: req.user.id
     });
 
-    res.status(201).json(expense);
+    res.status(201).json({ success: true, data: expense, message: 'Dépense enregistrée' });
   } catch (error) {
     console.error('Erreur createExpense:', error);
-    res.status(500).json({ message: 'Erreur serveur' });
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
 
@@ -55,14 +61,15 @@ const updateExpense = async (req, res) => {
   try {
     const expense = await Expense.findByPk(req.params.id);
     if (!expense) {
-      return res.status(404).json({ message: 'Dépense non trouvée' });
+      return res.status(404).json({ success: false, message: 'Dépense non trouvée' });
     }
 
-    await expense.update(req.body);
-    res.json(expense);
+    const { description, amount, category, date, paymentMethod, notes } = req.body;
+    await expense.update({ description, amount, category, date, paymentMethod, notes });
+    res.json({ success: true, data: expense, message: 'Dépense mise à jour' });
   } catch (error) {
     console.error('Erreur updateExpense:', error);
-    res.status(500).json({ message: 'Erreur serveur' });
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
 
@@ -70,14 +77,14 @@ const deleteExpense = async (req, res) => {
   try {
     const expense = await Expense.findByPk(req.params.id);
     if (!expense) {
-      return res.status(404).json({ message: 'Dépense non trouvée' });
+      return res.status(404).json({ success: false, message: 'Dépense non trouvée' });
     }
 
     await expense.destroy();
-    res.json({ message: 'Dépense supprimée avec succès' });
+    res.json({ success: true, message: 'Dépense supprimée avec succès' });
   } catch (error) {
     console.error('Erreur deleteExpense:', error);
-    res.status(500).json({ message: 'Erreur serveur' });
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
 
@@ -99,13 +106,16 @@ const getExpensesStats = async (req, res) => {
     const totalExpense = expenses.reduce((sum, e) => sum + parseFloat(e.amount), 0);
 
     res.json({
-      totalExpense,
-      count: expenses.length,
-      expenses
+      success: true,
+      data: {
+        totalExpense,
+        count: expenses.length,
+        expenses
+      }
     });
   } catch (error) {
     console.error('Erreur getExpensesStats:', error);
-    res.status(500).json({ message: 'Erreur serveur' });
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
 

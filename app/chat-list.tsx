@@ -1,11 +1,34 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Clock } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { ArrowLeft, MessageSquare } from 'lucide-react-native';
+import { api } from '../src/api/api';
 
 export default function ChatListScreen() {
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [employees, setEmployees] = useState<any[]>([]);
+
+  const loadEmployees = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await api.getEmployees();
+      if (response.success && response.data) {
+        setEmployees(response.data);
+      }
+    } catch (error) {
+      console.error('Error loading employees:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadEmployees();
+    }, [loadEmployees])
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -13,55 +36,84 @@ export default function ChatListScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <ArrowLeft size={24} color="white" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Liste de Chat</Text>
+        <Text style={styles.headerTitle}>Messages</Text>
         <View style={{ width: 24 }} />
       </View>
 
-      <View style={styles.content}>
-        <Clock size={64} color="#059669" />
-        <Text style={styles.title}>En cours de développement</Text>
-        <Text style={styles.subtitle}>
-          Cette fonctionnalité sera disponible très bientôt !
-        </Text>
-      </View>
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#059669" />
+          <Text style={styles.loadingText}>Chargement...</Text>
+        </View>
+      ) : (
+        <ScrollView style={styles.content}>
+          {employees.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <MessageSquare size={64} color="#059669" />
+              <Text style={styles.emptyText}>Aucun contact</Text>
+            </View>
+          ) : (
+            employees.map(employee => (
+              <TouchableOpacity
+                key={employee.id}
+                style={styles.contactCard}
+                onPress={() => router.push(`/chat?id=${employee.id}&name=${employee.username}`)}
+              >
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>{employee.username.charAt(0).toUpperCase()}</Text>
+                </View>
+                <View style={styles.contactInfo}>
+                  <Text style={styles.contactName}>{employee.username}</Text>
+                  {employee.email && <Text style={styles.contactEmail}>{employee.email}</Text>}
+                </View>
+              </TouchableOpacity>
+            ))
+          )}
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f3f4f6',
-  },
+  container: { flex: 1, backgroundColor: '#f3f4f6' },
   header: {
     backgroundColor: '#059669',
     padding: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'space-between'
   },
-  headerTitle: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
+  headerTitle: { color: 'white', fontSize: 20, fontWeight: 'bold' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { marginTop: 10, color: '#6b7280', fontSize: 16 },
+  content: { flex: 1, padding: 16, paddingTop: 0 },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 60 },
+  emptyText: { fontSize: 20, fontWeight: 'bold', color: '#111827', marginTop: 16 },
+  contactCard: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    flexDirection: 'row',
     alignItems: 'center',
-    padding: 40,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginTop: 20,
-    textAlign: 'center',
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#059669',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#6b7280',
-    marginTop: 10,
-    textAlign: 'center',
-  },
+  avatarText: { color: 'white', fontSize: 20, fontWeight: 'bold' },
+  contactInfo: { flex: 1 },
+  contactName: { fontSize: 16, fontWeight: 'bold', color: '#111827' },
+  contactEmail: { fontSize: 14, color: '#6b7280', marginTop: 4 }
 });

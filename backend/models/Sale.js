@@ -47,7 +47,13 @@ const Sale = sequelize.define('Sale', {
   }
 }, {
   timestamps: true,
-  tableName: 'sales'
+  tableName: 'sales',
+  indexes: [
+    { fields: ['productId'] },
+    { fields: ['createdAt'] },
+    { fields: ['paymentMethod'] },
+    { fields: ['soldBy'] },
+  ]
 });
 
 module.exports = Sale;

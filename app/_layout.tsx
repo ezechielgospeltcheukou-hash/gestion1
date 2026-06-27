@@ -1,56 +1,59 @@
 import { useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { api } from '../src/api/api';
+import { ThemeProvider } from '../src/theme/ThemeContext';
+import { ErrorBoundary } from '../src/components/ErrorBoundary';
 
 export default function RootLayout() {
   const [appReady, setAppReady] = useState(false);
-  const [initialNavigationDone, setInitialNavigationDone] = useState(false);
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
-    const initApp = async () => {
-      try {
-        await api.waitUntilReady();
-        setAppReady(true);
-      } catch (error) {
-        console.error('App initialization failed:', error);
-        setAppReady(true);
-      }
-    };
-    initApp();
+    const timer = setTimeout(() => setAppReady(true), 1500);
+    api.waitUntilReady().then(() => setAppReady(true)).catch(() => setAppReady(true));
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
-    if (!appReady || initialNavigationDone) return;
+    if (!appReady) return;
 
     const checkAuth = async () => {
       const isAuthenticated = await api.isAuthenticated();
-      const inAuthGroup = segments[0] === '(auth)';
-      const inTabsGroup = segments[0] === '(tabs)';
+      const path = segments[0];
+      const inAuth = path === '(auth)';
+      const inTabs = path === '(tabs)';
+      const standalone = ['employees', 'invoices', 'appointments', 'chat', 'chat-list', 'activity', 'forgot-password', 'email-setup', 'tutorial'].includes(path);
 
-      console.log('Navigation state:', { inAuthGroup, inTabsGroup, isAuthenticated, segments });
-
-      if (isAuthenticated && !inTabsGroup) {
-        console.log('Redirecting to dashboard');
+      if (!isAuthenticated && !inAuth) {
+        router.replace('/(auth)');
+      } else if (isAuthenticated && !inTabs && !standalone && !inAuth) {
         router.replace('/(tabs)');
-      } else if (!isAuthenticated && !inAuthGroup) {
-        console.log('Redirecting to login');
-        router.replace('/(auth)/login');
       }
-
-      setInitialNavigationDone(true);
     };
 
     checkAuth();
-  }, [appReady, initialNavigationDone, segments]);
+  }, [appReady, segments, router]);
 
   if (!appReady) return null;
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-    </Stack>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="tutorial" />
+          <Stack.Screen name="employees" />
+          <Stack.Screen name="invoices" />
+          <Stack.Screen name="appointments" />
+          <Stack.Screen name="chat" />
+          <Stack.Screen name="chat-list" />
+          <Stack.Screen name="activity" />
+          <Stack.Screen name="forgot-password" />
+          <Stack.Screen name="email-setup" />
+        </Stack>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }

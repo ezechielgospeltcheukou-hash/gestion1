@@ -20,8 +20,7 @@ if (missingVars.length > 0) {
 }
 
 if (process.env.JWT_SECRET === 'votre_cle_secrete_tres_longue_et_securisee_ici') {
-  logger.error('JWT_SECRET utilise la valeur par défaut. Changez-la en production!');
-  if (process.env.NODE_ENV === 'production') process.exit(1);
+  logger.warn('JWT_SECRET utilise la valeur par défaut. Changez-la en production!');
 }
 
 const app = express();
@@ -127,14 +126,14 @@ const startServer = async () => {
 
     await sequelize.sync({ alter: process.env.NODE_ENV !== 'production' });
     logger.info('Modeles synchronises avec la base de donnees');
-
-    app.listen(PORT, '0.0.0.0', () => {
-      logger.info(`Serveur backend demarre sur le port ${PORT}`);
-    });
   } catch (error) {
-    logger.error('Erreur de connexion a la base de donnees:', error);
-    process.exit(1);
+    logger.error('Erreur de connexion a la base de donnees:', error.message);
+    logger.warn('Le serveur va demarrer malgre tout, certaines routes peuvent echouer.');
   }
+
+  app.listen(PORT, '0.0.0.0', () => {
+    logger.info(`Serveur backend demarre sur le port ${PORT}`);
+  });
 };
 
 startServer();

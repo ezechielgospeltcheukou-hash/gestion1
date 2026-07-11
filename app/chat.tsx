@@ -4,9 +4,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Send } from 'lucide-react-native';
 import { api } from '../src/api/api';
+import { useThemeColors } from '../src/theme/ThemeContext';
 
 export default function ChatScreen() {
   const router = useRouter();
+  const colors = useThemeColors();
   const { id, name } = useLocalSearchParams();
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,12 +72,12 @@ export default function ChatScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.headerBg }]}>
         <TouchableOpacity onPress={() => router.back()}>
-          <ArrowLeft size={24} color="white" />
+          <ArrowLeft size={24} color={colors.headerText} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{name || 'Discussion'}</Text>
+        <Text style={[styles.headerTitle, { color: colors.headerText }]}>{name || 'Discussion'}</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -94,25 +96,35 @@ export default function ChatScreen() {
             ) : (
               messages.map(msg => (
                 <View key={msg.id} style={styles.messageRow}>
-                  <View style={[styles.messageBubble, msg.fromUserId === currentUser?.id ? styles.sentBubble : styles.receivedBubble]}>
-                    <Text style={styles.messageText}>{msg.content}</Text>
-                    <Text style={styles.messageTime}>{formatDate(msg.createdAt)}</Text>
+                  <View style={[
+                    styles.messageBubble, 
+                    msg.fromUserId === currentUser?.id ? [styles.sentBubble, { backgroundColor: colors.primary }] : [styles.receivedBubble, { backgroundColor: colors.card }]
+                  ]}>
+                    <Text style={[
+                      styles.messageText, 
+                      msg.fromUserId === currentUser?.id ? { color: 'white' } : { color: colors.text }
+                    ]}>{msg.content}</Text>
+                    <Text style={[
+                      styles.messageTime,
+                      msg.fromUserId === currentUser?.id ? { color: 'rgba(255,255,255,0.7)' } : { color: colors.textTertiary }
+                    ]}>{formatDate(msg.createdAt)}</Text>
                   </View>
                 </View>
               ))
             )}
           </ScrollView>
 
-          <View style={styles.inputContainer}>
+          <View style={[styles.inputContainer, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text }]}
               value={messageText}
               onChangeText={setMessageText}
               placeholder="Écrire un message..."
+              placeholderTextColor={colors.textTertiary}
               multiline
             />
             <TouchableOpacity
-              style={styles.sendButton}
+              style={[styles.sendButton, { backgroundColor: colors.primary }]}
               onPress={handleSend}
               disabled={sending}
             >

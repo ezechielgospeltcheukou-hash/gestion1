@@ -63,6 +63,10 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING,
     allowNull: true
   },
+  refreshToken: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
   permissions: {
     type: DataTypes.JSON,
     allowNull: true,
@@ -97,7 +101,6 @@ User.beforeCreate(async (user) => {
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(user.password, salt);
   }
-  // Auto-generate employee code for employees
   if (user.role === 'EMPLOYEE' && !user.employeeCode) {
     const lastUser = await User.findOne({
       order: [['id', 'DESC']],

@@ -14,7 +14,16 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [loginError, setLoginError] = useState('');
   const [errors, setErrors] = useState<{username?: string; password?: string}>({});
+
+  const showAlert = (title: string, message: string) => {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}\n\n${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
 
   const validateForm = (): boolean => {
     const newErrors: {username?: string; password?: string} = {};
@@ -41,6 +50,7 @@ export default function LoginScreen() {
     }
 
     setLoading(true);
+    setLoginError('');
     try {
       let result;
       if (isEmployeeMode) {
@@ -51,11 +61,15 @@ export default function LoginScreen() {
       if (result.success) {
         router.replace('/(tabs)');
       } else {
-        Alert.alert('Erreur', result.message || 'Identifiants incorrects');
+        const msg = result.message || 'Identifiants incorrects';
+        setLoginError(msg);
+        showAlert('Erreur', msg);
       }
     } catch (error) {
       console.error('[LOGIN] Error:', error);
-      Alert.alert('Erreur', 'Une erreur est survenue. Veuillez reessayer: ' + (error as Error).message);
+      const msg = 'Une erreur est survenue. Veuillez reessayer: ' + (error as Error).message;
+      setLoginError(msg);
+      showAlert('Erreur', msg);
     } finally {
       setLoading(false);
     }
@@ -175,6 +189,12 @@ export default function LoginScreen() {
               </View>
             )}
           </View>
+
+          {loginError ? (
+            <View style={{ backgroundColor: '#fef2f2', borderRadius: 12, padding: 12, marginBottom: 10 }}>
+              <Text style={{ color: '#dc2626', fontSize: 14, textAlign: 'center' }}>{loginError}</Text>
+            </View>
+          ) : null}
 
           <TouchableOpacity 
             style={[styles.button, { backgroundColor: colors.primary }, loading && styles.buttonDisabled]} 

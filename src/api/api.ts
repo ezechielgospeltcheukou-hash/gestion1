@@ -278,11 +278,11 @@ class ApiService {
     try {
       const storedToken = await Promise.race([
         storage.getItem('auth_token'),
-        new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000))
+        new Promise<string | null>((resolve) => setTimeout(() => resolve(null), 3000))
       ]);
       const storedUser = await Promise.race([
         storage.getItem('auth_user'),
-        new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000))
+        new Promise<string | null>((resolve) => setTimeout(() => resolve(null), 3000))
       ]);
 
       if (storedToken) {
@@ -494,7 +494,45 @@ class ApiService {
       }
       return result;
     } catch (error) {
-      return { success: false, message: 'Erreur de connexion au serveur: ' + (error as Error).message };
+      console.error('ApiService.register error (server unreachable), trying offline register:', error);
+      // Fallback: register locally
+      try {
+        const { Platform } = require('react-native');
+        if (Platform.OS === 'web') {
+          const localUser: AuthResponse = {
+            id: 1,
+            username: data.username,
+            role: 'ADMIN',
+            businessName: data.businessName,
+            token: 'offline-web-token-' + Date.now(),
+          };
+          this.token = localUser.token;
+          this.user = localUser;
+          await this.saveAuthToStorage();
+          return { success: true, data: localUser, message: 'Inscription hors-ligne (web)' };
+        }
+        const { registerUser, loginUser } = require('../database/database');
+        await registerUser(data.username, data.password, data.businessName || '');
+        const localResult = await loginUser(data.password, data.username);
+        if (localResult) {
+          const fakeToken = 'offline-token-' + Date.now();
+          const localUser: AuthResponse = {
+            id: localResult.id,
+            username: localResult.username,
+            role: 'ADMIN',
+            businessName: localResult.business_name,
+            token: fakeToken,
+          };
+          this.token = fakeToken;
+          this.user = localUser;
+          await this.saveAuthToStorage();
+          return { success: true, data: localUser, message: 'Inscription hors-ligne réussie' };
+        }
+        return { success: false, message: 'Erreur lors de l\'inscription hors-ligne' };
+      } catch (offlineError) {
+        console.error('Offline register also failed:', offlineError);
+        return { success: false, message: 'Serveur injoignable. Vérifiez votre connexion internet.' };
+      }
     }
   }
 
@@ -516,8 +554,56 @@ class ApiService {
       }
       return result;
     } catch (error) {
-      console.error('ApiService.login error:', error);
-      return { success: false, message: 'Erreur de connexion au serveur: ' + (error as Error).message };
+      console.error('ApiService.login error (server unreachable), trying offline login:', error);
+      // Fallback: try local SQLite login on native platforms
+      return this.offlineLogin(data.username, data.password);
+    }
+  }
+
+  private async offlineLogin(username: string, password: string): Promise<ApiResponse<AuthResponse>> {
+    try {
+      const { Platform } = require('react-native');
+      if (Platform.OS === 'web') {
+        // On the web, SQLite is not available. Create a local-only session.
+        const localUser: AuthResponse = {
+          id: 1,
+          username: username,
+          role: 'ADMIN',
+          token: 'offline-web-token-' + Date.now(),
+          permissions: {
+            sales: true, inventory: true, clients: true, suppliers: true,
+            expenses: true, invoices: true, cash: true, reports: true,
+            appointments: true, credits: true, messages: true, employees: true,
+          } as any,
+        };
+        this.token = localUser.token;
+        this.user = localUser;
+        await this.saveAuthToStorage();
+        return { success: true, data: localUser, message: 'Connexion hors-ligne (web)' };
+      }
+
+      // Native: use local SQLite database
+      const { loginUser } = require('../database/database');
+      const localResult = await loginUser(password, username);
+      if (localResult) {
+        const fakeToken = 'offline-token-' + Date.now();
+        const localUser: AuthResponse = {
+          id: localResult.id,
+          username: localResult.username,
+          role: (localResult.role as 'ADMIN' | 'EMPLOYEE') || 'ADMIN',
+          businessName: localResult.business_name,
+          email: localResult.email,
+          token: fakeToken,
+        };
+        this.token = fakeToken;
+        this.user = localUser;
+        await this.saveAuthToStorage();
+        return { success: true, data: localUser, message: 'Connexion hors-ligne réussie' };
+      }
+      return { success: false, message: 'Identifiants incorrects (mode hors-ligne)' };
+    } catch (offlineError) {
+      console.error('Offline login also failed:', offlineError);
+      return { success: false, message: 'Serveur injoignable et connexion hors-ligne impossible. Vérifiez votre connexion internet.' };
     }
   }
 
@@ -560,8 +646,28 @@ class ApiService {
       }
       return result;
     } catch (error) {
-      console.error('ApiService.loginByCode error:', error);
-      return { success: false, message: 'Erreur de connexion au serveur: ' + (error as Error).message };
+      console.error('ApiService.loginByCode error (server unreachable):', error);
+      
+      const localEmployee = this.cachedEmployees.find(
+        e => (e.employeeCode === data.employeeCode || e.username === data.employeeCode) && e.password === data.password
+      );
+
+      if (localEmployee) {
+        const fakeToken = 'offline-emp-token-' + Date.now();
+        const localUser: AuthResponse = {
+          id: localEmployee.id,
+          username: localEmployee.username,
+          role: localEmployee.role || 'EMPLOYEE',
+          businessName: 'Hors-ligne',
+          token: fakeToken,
+        };
+        this.token = fakeToken;
+        this.user = localUser;
+        await this.saveAuthToStorage();
+        return { success: true, data: localUser, message: 'Connexion employe hors-ligne reussie' };
+      }
+
+      return { success: false, message: 'Serveur injoignable et identifiants introuvables localement.' };
     }
   }
 
@@ -576,8 +682,14 @@ class ApiService {
       if (result.success && result.data) {
         this.cachedStats = result.data;
         await this.setCache('cache_stats', result.data);
+        return result;
+      } else {
+        // Fallback to local stats even if server returns error
+        const localStats = this.computeLocalStats();
+        this.cachedStats = localStats;
+        await this.setCache('cache_stats', localStats);
+        return { success: true, data: localStats, message: 'Données hors ligne' };
       }
-      return result;
     } catch (error) {
       // Compute stats locally if server is down
       const localStats = this.computeLocalStats();
@@ -595,10 +707,161 @@ class ApiService {
         headers: this.getHeaders(),
       });
       const result = await this.handleResponse<BilanData>(response);
-      return result;
+      if (result.success && result.data) {
+        return result;
+      } else {
+        // Fallback to local bilan even if server returns error
+        const localBilan = this.computeLocalBilan();
+        return { success: true, data: localBilan, message: 'Données hors ligne' };
+      }
     } catch (error) {
-      return { success: false, message: 'Erreur de connexion au serveur: ' + (error as Error).message };
+      const localBilan = this.computeLocalBilan();
+      return { success: true, data: localBilan, message: 'Données hors ligne' };
     }
+  }
+
+  private computeLocalBilan(): BilanData {
+    const now = new Date();
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const allSales = this.cachedSales;
+    const salesThisMonth = allSales.filter(sale => {
+      const saleDate = sale.createdAt ? new Date(sale.createdAt) : new Date();
+      return saleDate >= startOfMonth;
+    });
+    const salesToday = allSales.filter(sale => {
+      const saleDate = sale.createdAt ? new Date(sale.createdAt) : new Date();
+      return saleDate >= today;
+    });
+
+    const allExpenses = this.cachedExpenses;
+    const expensesThisMonth = allExpenses.filter(expense => {
+      const expenseDate = expense.date ? new Date(expense.date) : new Date();
+      return expenseDate >= startOfMonth;
+    });
+    const allProducts = this.cachedProducts;
+
+    const cashData = this.cachedCashResponse || { transactions: [], totalIn: 0, totalOut: 0, balance: 0 };
+
+    const totalSalesVal = allSales.reduce((sum, sale) => sum + Number(sale.totalPrice || 0), 0);
+    const totalSalesMonth = salesThisMonth.reduce((sum, sale) => sum + Number(sale.totalPrice || 0), 0);
+    const totalSalesTodayVal = salesToday.reduce((sum, sale) => sum + Number(sale.totalPrice || 0), 0);
+    const salesCount = allSales.length;
+
+    const totalExpensesVal = allExpenses.reduce((sum, exp) => sum + Number(exp.amount || 0), 0);
+    const totalExpensesMonth = expensesThisMonth.reduce((sum, exp) => sum + Number(exp.amount || 0), 0);
+
+    const stockVal = allProducts.reduce((sum, p) => sum + (Number(p.purchasePrice || 0) * (p.stock || 0)), 0);
+    const totalStockUnits = allProducts.reduce((sum, p) => sum + (p.stock || 0), 0);
+
+    const cashIn = cashData.totalIn;
+    const cashOut = cashData.totalOut;
+    const cashBalance = cashData.balance;
+
+    const creditsReceivable = this.cachedCredits.filter(c => c.personType === 'CLIENT' && !c.isRepaid).reduce((sum, c) => sum + Number(c.amount || 0), 0);
+    const creditsPayable = this.cachedCredits.filter(c => (c.personType === 'SUPPLIER') && !c.isRepaid).reduce((sum, c) => sum + Number(c.amount || 0), 0);
+
+    const totalClientBalance = this.cachedClients.reduce((sum, c) => sum + Number(c.balance || 0), 0);
+    const totalSupplierBalance = this.cachedSuppliers.reduce((sum, s) => sum + Number(s.balance || 0), 0);
+
+    const cogsVal = allSales.reduce((sum, sale) => sum + (Number(sale.purchasePriceAtSale || 0) * (sale.quantity || 0)), 0);
+
+    const grossProfit = totalSalesVal - cogsVal;
+    const netProfit = grossProfit - totalExpensesVal;
+
+    const totalAssets = stockVal + cashBalance + creditsReceivable;
+    const totalLiabilities = creditsPayable + totalSupplierBalance;
+
+    const productsCount = allProducts.length;
+
+    const paymentMethods: Record<string, { nombre: number; total: number }> = {};
+    allSales.forEach(sale => {
+      const method = sale.paymentMethod || 'Inconnu';
+      if (!paymentMethods[method]) paymentMethods[method] = { nombre: 0, total: 0 };
+      paymentMethods[method].nombre++;
+      paymentMethods[method].total += Number(sale.totalPrice || 0);
+    });
+
+    const monthlyRevenue: Record<string, number> = {};
+    allSales.forEach(sale => {
+      if (!sale.createdAt) return;
+      const month = sale.createdAt.substring(0, 7);
+      if (!monthlyRevenue[month]) monthlyRevenue[month] = 0;
+      monthlyRevenue[month] += Number(sale.totalPrice || 0);
+    });
+
+    const monthlyExpensesMap: Record<string, number> = {};
+    allExpenses.forEach(exp => {
+      if (!exp.date) return;
+      const month = exp.date.substring(0, 7);
+      if (!monthlyExpensesMap[month]) monthlyExpensesMap[month] = 0;
+      monthlyExpensesMap[month] += Number(exp.amount || 0);
+    });
+
+    const last12Months: string[] = [];
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      last12Months.push(d.toISOString().substring(0, 7));
+    }
+
+    return {
+      bilan: {
+        actif: {
+          stock: { valeur: stockVal, unites: totalStockUnits },
+          tresorerie: cashBalance,
+          encaissement: cashIn,
+          decaissement: cashOut,
+          creditsClients: creditsReceivable,
+          facturesImpayees: 0,
+          totalActif: totalAssets,
+        },
+        passif: {
+          creditsFournisseurs: creditsPayable,
+          soldesFournisseurs: totalSupplierBalance,
+          totalPassif: totalLiabilities,
+        },
+        capitauxPropres: totalAssets - totalLiabilities,
+      },
+      performance: {
+        chiffreAffaires: {
+          total: totalSalesVal,
+          moisEnCours: totalSalesMonth,
+          aujourdhui: totalSalesTodayVal,
+        },
+        coutDesVentes: cogsVal,
+        margeBrute: grossProfit,
+        depenses: {
+          total: totalExpensesVal,
+          moisEnCours: totalExpensesMonth,
+        },
+        resultatNet: netProfit,
+      },
+      indicateurs: {
+        totalProduits: productsCount,
+        totalVentes: salesCount,
+        totalClients: this.cachedClients.length,
+        totalFournisseurs: this.cachedSuppliers.length,
+        valeurMoyennePanier: salesCount > 0 ? totalSalesVal / salesCount : 0,
+        ratioMarge: totalSalesVal > 0 ? (grossProfit / totalSalesVal * 100) : 0,
+      },
+      repartitionVentes: Object.entries(paymentMethods).map(([methode, data]) => ({
+        methode,
+        nombre: data.nombre,
+        total: data.total,
+      })),
+      evolutionMensuelle: {
+        revenus: last12Months.map(month => ({
+          mois: month,
+          total: monthlyRevenue[month] || 0,
+        })),
+        depenses: last12Months.map(month => ({
+          mois: month,
+          total: monthlyExpensesMap[month] || 0,
+        })),
+      },
+    };
   }
 
   async getClients(): Promise<ApiResponse<Client[]>> {

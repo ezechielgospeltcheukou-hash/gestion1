@@ -4,9 +4,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { ArrowLeft, MessageSquare } from 'lucide-react-native';
 import { api } from '../src/api/api';
+import { useThemeColors } from '../src/theme/ThemeContext';
 
 export default function ChatListScreen() {
   const router = useRouter();
+  const colors = useThemeColors();
   const [loading, setLoading] = useState(true);
   const [employees, setEmployees] = useState<any[]>([]);
 
@@ -31,12 +33,12 @@ export default function ChatListScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.headerBg }]}>
         <TouchableOpacity onPress={() => router.back()}>
-          <ArrowLeft size={24} color="white" />
+          <ArrowLeft size={24} color={colors.headerText} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Messages</Text>
+        <Text style={[styles.headerTitle, { color: colors.headerText }]}>Messages</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -56,15 +58,15 @@ export default function ChatListScreen() {
             employees.map(employee => (
               <TouchableOpacity
                 key={employee.id}
-                style={styles.contactCard}
+                style={[styles.contactCard, { backgroundColor: colors.card }]}
                 onPress={() => router.push(`/chat?id=${employee.id}&name=${employee.username}`)}
               >
-                <View style={styles.avatar}>
+                <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
                   <Text style={styles.avatarText}>{employee.username.charAt(0).toUpperCase()}</Text>
                 </View>
                 <View style={styles.contactInfo}>
-                  <Text style={styles.contactName}>{employee.username}</Text>
-                  {employee.email && <Text style={styles.contactEmail}>{employee.email}</Text>}
+                  <Text style={[styles.contactName, { color: colors.text }]}>{employee.username}</Text>
+                  {employee.email && <Text style={[styles.contactEmail, { color: colors.textSecondary }]}>{employee.email}</Text>}
                 </View>
               </TouchableOpacity>
             ))

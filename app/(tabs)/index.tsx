@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, StatusBar, ActivityIndicator, Alert, Animated, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, StatusBar, ActivityIndicator, Alert, Animated, RefreshControl, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { 
   ShoppingCart, 
@@ -96,6 +96,14 @@ export default function Dashboard() {
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
 
   const handleLogout = async () => {
+    if (Platform.OS === 'web') {
+      if (window.confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
+        await api.logout();
+        router.replace('/(auth)/login');
+      }
+      return;
+    }
+
     Alert.alert(
       'Déconnexion',
       'Êtes-vous sûr de vouloir vous déconnecter ?',

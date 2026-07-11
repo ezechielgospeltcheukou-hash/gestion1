@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Switch, ScrollView, Alert, Modal, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Switch, ScrollView, Alert, Modal, TextInput, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, User, Bell, Lock, HelpCircle, LogOut, Edit, Save } from 'lucide-react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -37,7 +37,7 @@ export default function SettingsScreen() {
   const colors = useThemeColors();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [darkModeEnabled, setDarkModeEnabled] = useState(theme === 'dark');
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -138,6 +138,19 @@ export default function SettingsScreen() {
   };
 
   const handleLogout = () => {
+    if (Platform.OS === 'web') {
+      if (window.confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
+        api.logout().then(() => {
+          try {
+            router.replace('/(auth)');
+          } catch {
+            router.push('/(auth)');
+          }
+        });
+      }
+      return;
+    }
+
     Alert.alert(
       'Déconnexion',
       'Êtes-vous sûr de vouloir vous déconnecter ?',

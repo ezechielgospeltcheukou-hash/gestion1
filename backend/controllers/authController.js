@@ -164,4 +164,37 @@ const updateProfile = async (req, res) => {
   }
 };
 
-module.exports = { register, login, loginByCode, getMe, updateProfile };
+const refreshToken = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    if (!refreshToken) {
+      return res.status(400).json({ success: false, message: 'Refresh token requis' });
+    }
+
+    const user = await User.findOne({ where: { refreshToken } });
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Refresh token invalide' });
+    }
+
+    const newToken = generateToken(user.id);
+
+    await user.update({ refreshToken: refreshToken });
+
+    res.json({ success: true, data: { token: newToken } });
+  } catch (error) {
+    console.error('Erreur refreshToken:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+const logout = async (req, res) => {
+  try {
+    await User.update({ refreshToken: null }, { where: { id: req.user.id } });
+    res.json({ success: true, message: 'Déconnexion réussie' });
+  } catch (error) {
+    console.error('Erreur logout:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+module.exports = { register, login, loginByCode, getMe, updateProfile, refreshToken, logout };

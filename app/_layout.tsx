@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { api } from '../src/api/api';
+import { initDB } from '../src/database/database';
 import { ThemeProvider } from '../src/theme/ThemeContext';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
 
@@ -10,6 +12,7 @@ export default function RootLayout() {
   const router = useRouter();
 
   useEffect(() => {
+    initDB();
     const timer = setTimeout(() => setAppReady(true), 1500);
     api.waitUntilReady().then(() => setAppReady(true)).catch(() => setAppReady(true));
     return () => clearTimeout(timer);
@@ -27,7 +30,7 @@ export default function RootLayout() {
 
       if (!isAuthenticated && !inAuth) {
         router.replace('/(auth)');
-      } else if (isAuthenticated && !inTabs && !standalone && !inAuth) {
+      } else if (isAuthenticated && (inAuth || (!inTabs && !standalone))) {
         router.replace('/(tabs)');
       }
     };
@@ -35,7 +38,13 @@ export default function RootLayout() {
     checkAuth();
   }, [appReady, segments, router]);
 
-  if (!appReady) return null;
+  if (!appReady) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#059669" />
+      </View>
+    );
+  }
 
   return (
     <ErrorBoundary>
@@ -57,3 +66,12 @@ export default function RootLayout() {
     </ErrorBoundary>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6'
+  }
+});

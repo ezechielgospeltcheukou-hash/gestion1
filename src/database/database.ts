@@ -2,10 +2,20 @@ import * as SQLite from 'expo-sqlite';
 import * as Notifications from 'expo-notifications';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import { Platform } from 'react-native';
 
-let db: SQLite.SQLiteDatabase;
+let db: any;
 
 const getDB = () => {
+  if (Platform.OS === 'web') {
+    return {
+      runSync: () => {},
+      execSync: () => {},
+      getFirstSync: () => null,
+      getAllSync: () => [],
+      withTransactionSync: (cb: () => void) => { cb(); }
+    };
+  }
   if (!db) {
     db = SQLite.openDatabaseSync('accounting.db');
   }

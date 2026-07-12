@@ -2,15 +2,7 @@
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, StatusBar, ActivityIndicator, Alert, Animated, RefreshControl, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { 
-
-// Helper pour afficher alertes sur web et mobile
-const showAlert = (title: string, message: string = '') => {
-  if (typeof window !== 'undefined' && typeof window.alert === 'function') {
-    window.alert(message ? (title + '\n\n' + message) : title);
-  } else {
-    showAlert(title, message || undefined);
-  }
-};  ShoppingCart, 
+  ShoppingCart, 
   Receipt, 
   Package, 
   PieChart, 
@@ -38,14 +30,15 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { api } from '../../src/api/api';
 import { useThemeColors } from '../../src/theme/ThemeContext';
 
-// Helper pour afficher alertes sur web et mobile
-const showAlert = (title: string, message: string = '') => {
-  if (typeof window !== 'undefined' && typeof window.alert === 'function') {
-    window.alert(message ? (title + '\n\n' + message) : title);
+// Helper: affiche alertes sur web et mobile
+const showAlert = (title: string, message?: string) => {
+  if (typeof window !== 'undefined' && typeof (window as any).alert === 'function') {
+    (window as any).alert(message ? (title + '\n\n' + message) : title);
   } else {
-    showAlert(title, message || undefined);
+    Alert.alert(title, message);
   }
 };
+
 interface MenuItem {
   id: string;
   title: string;

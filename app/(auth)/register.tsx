@@ -5,14 +5,15 @@ import { User, Lock, Store, ArrowRight, BookOpen, LogIn, Mail, Eye, EyeOff, Chec
 import { api } from '../../src/api/api';
 import { useThemeColors } from '../../src/theme/ThemeContext';
 
-// Helper pour afficher alertes sur web et mobile
-const showAlert = (title: string, message: string = '') => {
-  if (typeof window !== 'undefined' && typeof window.alert === 'function') {
-    window.alert(message ? (title + '\n\n' + message) : title);
+// Helper: affiche alertes sur web et mobile
+const showAlert = (title: string, message?: string) => {
+  if (typeof window !== 'undefined' && typeof (window as any).alert === 'function') {
+    (window as any).alert(message ? (title + '\n\n' + message) : title);
   } else {
-    showAlert(title, message || undefined);
+    Alert.alert(title, message);
   }
 };
+
 export default function RegisterScreen() {
   const router = useRouter();
   const colors = useThemeColors();

@@ -7,14 +7,15 @@ import { api } from '../src/api/api';
 import type { Employee, Permissions } from '../src/api/api';
 import { useTheme, useThemeColors } from '../src/theme/ThemeContext';
 
-// Helper pour afficher alertes sur web et mobile
-const showAlert = (title: string, message: string = '') => {
-  if (typeof window !== 'undefined' && typeof window.alert === 'function') {
-    window.alert(message ? (title + '\n\n' + message) : title);
+// Helper: affiche alertes sur web et mobile
+const showAlert = (title: string, message?: string) => {
+  if (typeof window !== 'undefined' && typeof (window as any).alert === 'function') {
+    (window as any).alert(message ? (title + '\n\n' + message) : title);
   } else {
-    showAlert(title, message || undefined);
+    Alert.alert(title, message);
   }
 };
+
 const defaultPermissions: Permissions = {
   sales: true,
   inventory: true,

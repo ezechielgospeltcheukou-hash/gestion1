@@ -7,14 +7,15 @@ import { api } from '../../src/api/api';
 import { useThemeColors } from '../../src/theme/ThemeContext';
 import type { Product, Sale } from '../../src/api/api';
 
-// Helper pour afficher alertes sur web et mobile
-const showAlert = (title: string, message: string = '') => {
-  if (typeof window !== 'undefined' && typeof window.alert === 'function') {
-    window.alert(message ? (title + '\n\n' + message) : title);
+// Helper: affiche alertes sur web et mobile
+const showAlert = (title: string, message?: string) => {
+  if (typeof window !== 'undefined' && typeof (window as any).alert === 'function') {
+    (window as any).alert(message ? (title + '\n\n' + message) : title);
   } else {
-    showAlert(title, message || undefined);
+    Alert.alert(title, message);
   }
 };
+
 function SaleItem({ sale, index, products, onDelete, getProductName }: { sale: Sale, index: number, products: Product[], onDelete: (sale: Sale) => void, getProductName: (id: number) => string }) {
   const itemFadeAnim = useRef(new Animated.Value(0)).current;
 

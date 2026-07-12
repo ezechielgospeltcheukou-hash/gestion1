@@ -61,12 +61,15 @@ export default function RegisterScreen() {
     return Object.keys(newErrors).length === 0;
   };
 
+  const [registerError, setRegisterError] = useState('');
+
   const handleRegister = async () => {
     if (!validateForm()) {
       return;
     }
 
     setLoading(true);
+    setRegisterError('');
     try {
       const result = await api.register({
         username,
@@ -76,15 +79,26 @@ export default function RegisterScreen() {
       });
 
       if (result.success) {
-        Alert.alert('Succès', 'Votre compte a été créé avec succès !', [
-          { text: 'OK', onPress: () => router.replace('/(tabs)') }
-        ]);
+        // Sur le web, Alert avec callback ne fonctionne pas — on redirige directement
+        router.replace('/(tabs)');
       } else {
-        Alert.alert('Erreur', result.message || 'Impossible de créer le compte');
+        const msg = result.message || 'Impossible de créer le compte';
+        setRegisterError(msg);
+        if (Platform.OS === 'web') {
+          window.alert('Erreur\n\n' + msg);
+        } else {
+          Alert.alert('Erreur', msg);
+        }
       }
     } catch (error) {
       console.error('Register error:', error);
-      Alert.alert('Erreur', 'Une erreur est survenue. Veuillez réessayer.');
+      const msg = 'Une erreur est survenue. Veuillez réessayer.';
+      setRegisterError(msg);
+      if (Platform.OS === 'web') {
+        window.alert('Erreur\n\n' + msg);
+      } else {
+        Alert.alert('Erreur', msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -289,6 +303,12 @@ export default function RegisterScreen() {
               </View>
             )}
           </View>
+
+          {registerError ? (
+            <View style={{ backgroundColor: '#fef2f2', borderRadius: 12, padding: 12, marginBottom: 10 }}>
+              <Text style={{ color: '#dc2626', fontSize: 14, textAlign: 'center' }}>{registerError}</Text>
+            </View>
+          ) : null}
 
           <TouchableOpacity 
             style={[styles.button, { backgroundColor: colors.primary }, loading && styles.buttonDisabled]} 

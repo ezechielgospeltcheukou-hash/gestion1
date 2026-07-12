@@ -40,10 +40,7 @@ function SaleItem({ sale, index, products, onDelete, getProductName }: { sale: S
   };
 
   return (
-    <Animated.View style={[
-      styles.saleCard,
-      { opacity: itemFadeAnim }
-    ]}>
+    <Animated.View style={[styles.saleCard, { opacity: itemFadeAnim }]}>
       <View style={styles.saleInfo}>
         <View style={styles.saleHeader}>
           <Package size={20} color="#059669" />
@@ -165,7 +162,9 @@ export default function SalesScreen() {
 
     try {
       const product = products.find(p => p.id === formData.productId);
-      const unitPrice = formData.customUnitPrice ? parseFloat(formData.customUnitPrice) : (product?.price || 0);
+      const unitPrice = formData.customUnitPrice
+        ? parseFloat(formData.customUnitPrice)
+        : (product?.price || 0);
       const totalPrice = unitPrice * formData.quantity * (1 - formData.discount / 100);
 
       const response = await api.createSale({
@@ -177,6 +176,7 @@ export default function SalesScreen() {
         customUnitPrice: formData.customUnitPrice ? parseFloat(formData.customUnitPrice) : undefined,
         totalPrice
       });
+
       if (response.success) {
         showAlert('Succès', 'Vente enregistrée');
         setModalVisible(false);
@@ -233,6 +233,12 @@ export default function SalesScreen() {
     );
   });
 
+  const selectedProduct = products.find(p => p.id === formData.productId);
+  const customPrice = formData.customUnitPrice ? parseFloat(formData.customUnitPrice) : null;
+  const unitPrice = customPrice ?? (selectedProduct?.price || 0);
+  const totalPreview = unitPrice * formData.quantity * (1 - formData.discount / 100);
+  const priceDiff = customPrice !== null && selectedProduct ? customPrice - selectedProduct.price : null;
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.headerBg }]}>
@@ -264,28 +270,26 @@ export default function SalesScreen() {
           <Text style={styles.loadingText}>Chargement...</Text>
         </View>
       ) : (
-        <ScrollView style={[styles.content, { backgroundColor: colors.background }]} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#059669']} tintColor="#059669" />}>
+        <ScrollView
+          style={[styles.content, { backgroundColor: colors.background }]}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#059669']} tintColor="#059669" />}
+        >
           {filteredSales.length === 0 ? (
-            <Animated.View style={[
-              styles.emptyContainer,
-              { opacity: fadeAnim, transform: [{ scale: scaleAnim }]
-            }]}>
+            <Animated.View style={[styles.emptyContainer, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
               <ShoppingCart size={64} color="#059669" />
               <Text style={styles.emptyText}>
                 {searchQuery ? 'Aucune vente trouvée' : 'Aucune vente'}
               </Text>
               {!searchQuery && (
-                <Text style={styles.emptySubtext}>
-                  Enregistrez votre première vente
-                </Text>
+                <Text style={styles.emptySubtext}>Enregistrez votre première vente</Text>
               )}
             </Animated.View>
           ) : (
             filteredSales.map((sale, index) => (
-              <SaleItem 
-                key={sale.id} 
-                sale={sale} 
-                index={index} 
+              <SaleItem
+                key={sale.id}
+                sale={sale}
+                index={index}
                 products={products}
                 onDelete={handleDelete}
                 getProductName={getProductName}
@@ -295,14 +299,10 @@ export default function SalesScreen() {
         </ScrollView>
       )}
 
-      <Modal
-        visible={modalVisible}
-        animationType="slide"
-        onRequestClose={() => setModalVisible(false)}
-      >
+      <Modal visible={modalVisible} animationType="slide" onRequestClose={() => { setModalVisible(false); resetForm(); }}>
         <SafeAreaView style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setModalVisible(false)}>
+            <TouchableOpacity onPress={() => { setModalVisible(false); resetForm(); }}>
               <ArrowLeft size={24} color="#059669" />
             </TouchableOpacity>
             <Text style={styles.modalTitle}>Nouvelle vente</Text>
@@ -310,6 +310,8 @@ export default function SalesScreen() {
           </View>
 
           <ScrollView style={styles.modalContent}>
+
+            {/* Produit */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Produit</Text>
               <ScrollView horizontal style={styles.productPicker} showsHorizontalScrollIndicator={false}>
@@ -320,7 +322,7 @@ export default function SalesScreen() {
                       styles.productOption,
                       formData.productId === product.id && styles.productOptionSelected
                     ]}
-                    onPress={() => setFormData({ ...formData, productId: product.id! })}
+                    onPress={() => setFormData({ ...formData, productId: product.id!, customUnitPrice: '' })}
                     activeOpacity={0.7}
                   >
                     <Text style={styles.productOptionText}>{product.name}</Text>
@@ -330,6 +332,7 @@ export default function SalesScreen() {
               </ScrollView>
             </View>
 
+            {/* Quantité */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Quantité</Text>
               <TextInput
@@ -340,35 +343,41 @@ export default function SalesScreen() {
               />
             </View>
 
+            {/* Prix de vente personnalisé */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>💰 Prix de vente (optionnel)</Text>
+              <Text style={styles.label}>💰 Prix de vente unitaire (optionnel)</Text>
               <TextInput
-                style={[styles.input, formData.customUnitPrice ? { borderColor: '#f59e0b', borderWidth: 2 } : {}]}
+                style={[
+                  styles.input,
+                  formData.customUnitPrice ? { borderColor: '#f59e0b', borderWidth: 2 } : {}
+                ]}
                 value={formData.customUnitPrice}
                 onChangeText={text => setFormData({ ...formData, customUnitPrice: text })}
                 keyboardType="numeric"
                 placeholder={
-                  formData.productId > 0
-                    ? `Prix par défaut: ${Number(products.find(p => p.id === formData.productId)?.price || 0).toLocaleString()} FCFA`
-                    : 'Laissez vide pour utiliser le prix du stock'
+                  selectedProduct
+                    ? `Prix stock: ${Number(selectedProduct.price).toLocaleString()} FCFA — laisser vide pour utiliser ce prix`
+                    : 'Sélectionnez un produit d\'abord'
                 }
               />
-              {formData.customUnitPrice && formData.productId > 0 && (() => {
-                const prod = products.find(p => p.id === formData.productId);
-                const customP = parseFloat(formData.customUnitPrice);
-                const diff = customP - (prod?.price || 0);
-                const isLoss = diff < 0;
-                return (
-                  <Text style={{ fontSize: 12, marginTop: 4, color: isLoss ? '#ef4444' : '#059669', fontWeight: '600' }}>
-                    {isLoss
-                      ? `⚠️ Vente à perte: -${Math.abs(diff).toLocaleString()} FCFA par unité`
-                      : `✅ Marge: +${diff.toLocaleString()} FCFA par unité`
-                    }
-                  </Text>
-                );
-              })()}
+              {priceDiff !== null && (
+                <Text style={{
+                  fontSize: 13,
+                  marginTop: 6,
+                  fontWeight: '700',
+                  color: priceDiff < 0 ? '#ef4444' : '#059669'
+                }}>
+                  {priceDiff < 0
+                    ? `⚠️ Vente à perte: -${Math.abs(priceDiff).toLocaleString()} FCFA / unité`
+                    : priceDiff === 0
+                      ? '✅ Prix identique au stock'
+                      : `✅ Marge: +${priceDiff.toLocaleString()} FCFA / unité`
+                  }
+                </Text>
+              )}
             </View>
 
+            {/* Réduction */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Réduction (%)</Text>
               <TextInput
@@ -379,6 +388,7 @@ export default function SalesScreen() {
               />
             </View>
 
+            {/* Mode de paiement */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Mode de paiement</Text>
               <ScrollView horizontal style={styles.paymentPicker} showsHorizontalScrollIndicator={false}>
@@ -401,6 +411,7 @@ export default function SalesScreen() {
               </ScrollView>
             </View>
 
+            {/* Notes */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Notes</Text>
               <TextInput
@@ -413,30 +424,26 @@ export default function SalesScreen() {
               />
             </View>
 
+            {/* Aperçu */}
             {formData.productId > 0 && (
               <View style={styles.previewCard}>
                 <View style={styles.previewHeader}>
                   <Receipt size={20} color="#059669" />
-                  <Text style={styles.previewTitle}>Aperçu</Text>
+                  <Text style={styles.previewTitle}>Aperçu de la vente</Text>
                 </View>
+                <Text style={styles.previewText}>Produit: {getProductName(formData.productId)}</Text>
+                <Text style={styles.previewText}>Quantité: {formData.quantity}</Text>
                 <Text style={styles.previewText}>
-                  Produit: {getProductName(formData.productId)}
+                  Prix unitaire: {unitPrice.toLocaleString()} FCFA
+                  {customPrice !== null && selectedProduct && (
+                    ` (stock: ${Number(selectedProduct.price).toLocaleString()})`
+                  )}
                 </Text>
-                <Text style={styles.previewText}>
-                  Prix unitaire: {Number(
-                    formData.customUnitPrice
-                      ? parseFloat(formData.customUnitPrice)
-                      : (products.find(p => p.id === formData.productId)?.price || 0)
-                  ).toLocaleString()} FCFA
-                </Text>
-                <Text style={[styles.previewText, { fontWeight: 'bold', fontSize: 16, color: '#059669' }]}>
-                  Total: {Number(
-                    (formData.customUnitPrice
-                      ? parseFloat(formData.customUnitPrice)
-                      : (products.find(p => p.id === formData.productId)?.price || 0)) *
-                    formData.quantity *
-                    (1 - formData.discount / 100)
-                  ).toLocaleString()} FCFA
+                {formData.discount > 0 && (
+                  <Text style={styles.previewText}>Réduction: {formData.discount}%</Text>
+                )}
+                <Text style={[styles.previewText, { fontWeight: 'bold', fontSize: 18, color: '#059669', marginTop: 8 }]}>
+                  Total: {totalPreview.toLocaleString()} FCFA
                 </Text>
               </View>
             )}
@@ -445,6 +452,7 @@ export default function SalesScreen() {
               <Save size={20} color="white" />
               <Text style={styles.submitButtonText}>Enregistrer la vente</Text>
             </TouchableOpacity>
+
           </ScrollView>
         </SafeAreaView>
       </Modal>
@@ -482,14 +490,14 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, marginLeft: 12, fontSize: 16 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingLogo: { 
-    width: 100, 
-    height: 100, 
-    backgroundColor: '#d1fae5', 
-    borderRadius: 50, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    marginBottom: 20 
+  loadingLogo: {
+    width: 100,
+    height: 100,
+    backgroundColor: '#d1fae5',
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20
   },
   loadingText: { marginTop: 10, color: '#6b7280', fontSize: 16 },
   content: { flex: 1, padding: 16, paddingTop: 0 },
@@ -600,4 +608,3 @@ const styles = StyleSheet.create({
   },
   submitButtonText: { color: 'white', fontSize: 18, fontWeight: 'bold' }
 });
-

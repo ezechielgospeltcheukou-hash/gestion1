@@ -12,6 +12,12 @@ const errorHandler = (err, req, res, next) => {
     const messages = err.errors.map(e => e.message);
     return res.status(400).json({ success: false, message: 'Doublon détecté', errors: messages });
   }
+  if (err.name === 'SequelizeForeignKeyConstraintError') {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Impossible de supprimer cet élément car il a un historique (ventes, factures, etc.). Veuillez plutôt le désactiver ou le modifier.' 
+    });
+  }
 
   if (err.name === 'SequelizeDatabaseError') {
     return res.status(500).json({ success: false, message: 'Erreur de base de données' });

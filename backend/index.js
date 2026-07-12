@@ -25,6 +25,7 @@ if (process.env.JWT_SECRET === 'votre_cle_secrete_tres_longue_et_securisee_ici')
 
 const app = express();
 
+app.set('trust proxy', 1); // Indispensable pour Railway/Heroku avec express-rate-limit
 app.use(helmet());
 
 const generalLimiter = rateLimit({

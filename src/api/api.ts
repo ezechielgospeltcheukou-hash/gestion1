@@ -1,6 +1,6 @@
-﻿import { storage } from '../utils/storage';
+import { storage } from '../utils/storage';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://comptabilite-production-08f2.up.railway.app/api';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://web-production-8ba17.up.railway.app/api';
 const FETCH_TIMEOUT = 15000;
 
 async function fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Response> {

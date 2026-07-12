@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+﻿import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal, ActivityIndicator, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -6,6 +6,14 @@ import { ArrowLeft, Plus, Save, Trash2, Calendar, Edit } from 'lucide-react-nati
 import { api } from '../src/api/api';
 import type { Appointment } from '../src/api/api';
 
+// Helper pour afficher alertes sur web et mobile
+const showAlert = (title: string, message: string = '') => {
+  if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+    window.alert(message ? (title + '\n\n' + message) : title);
+  } else {
+    showAlert(title, message || undefined);
+  }
+};
 function AppointmentItem({ 
   appointment, 
   index, 
@@ -107,7 +115,7 @@ export default function AppointmentsScreen() {
       }
     } catch (error) {
       console.error('Error loading appointments:', error);
-      Alert.alert('Erreur', 'Impossible de charger les rendez-vous');
+      showAlert('Erreur', 'Impossible de charger les rendez-vous');
     } finally {
       setLoading(false);
     }
@@ -138,7 +146,7 @@ export default function AppointmentsScreen() {
 
   const handleSubmit = async () => {
     if (!formData.title.trim() || !formData.date) {
-      Alert.alert('Erreur', 'Veuillez renseigner le titre et la date du rendez-vous');
+      showAlert('Erreur', 'Veuillez renseigner le titre et la date du rendez-vous');
       return;
     }
 
@@ -151,21 +159,21 @@ export default function AppointmentsScreen() {
       }
 
       if (response.success) {
-        Alert.alert('Succès', editingAppointment ? 'Rendez-vous mis à jour' : 'Rendez-vous créé');
+        showAlert('Succès', editingAppointment ? 'Rendez-vous mis à jour' : 'Rendez-vous créé');
         setModalVisible(false);
         resetForm();
         loadAppointments();
       } else {
-        Alert.alert('Erreur', response.message || 'Une erreur est survenue');
+        showAlert('Erreur', response.message || 'Une erreur est survenue');
       }
     } catch (error) {
       console.error('Error saving appointment:', error);
-      Alert.alert('Erreur', 'Impossible de sauvegarder le rendez-vous');
+      showAlert('Erreur', 'Impossible de sauvegarder le rendez-vous');
     }
   };
 
   const handleDelete = (appointment: Appointment) => {
-    Alert.alert(
+    showAlert(
       'Confirmation',
       'Êtes-vous sûr de vouloir supprimer ce rendez-vous ?',
       [
@@ -177,14 +185,14 @@ export default function AppointmentsScreen() {
             try {
               const response = await api.deleteAppointment(appointment.id!);
               if (response.success) {
-                Alert.alert('Succès', 'Rendez-vous supprimé');
+                showAlert('Succès', 'Rendez-vous supprimé');
                 loadAppointments();
               } else {
-                Alert.alert('Erreur', response.message || 'Impossible de supprimer le rendez-vous');
+                showAlert('Erreur', response.message || 'Impossible de supprimer le rendez-vous');
               }
             } catch (error) {
               console.error('Error deleting appointment:', error);
-              Alert.alert('Erreur', 'Impossible de supprimer le rendez-vous');
+              showAlert('Erreur', 'Impossible de supprimer le rendez-vous');
             }
           }
         }
@@ -510,3 +518,4 @@ const styles = StyleSheet.create({
   },
   submitButtonText: { color: 'white', fontSize: 18, fontWeight: 'bold' }
 });
+

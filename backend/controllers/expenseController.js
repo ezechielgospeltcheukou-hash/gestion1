@@ -1,7 +1,7 @@
-const Expense = require('../models/Expense');
+﻿const Expense = require('../models/Expense');
 const sequelize = require('../config/database');
 
-const getExpenses = async (req, res) => {
+const getExpenses = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
@@ -15,24 +15,24 @@ const getExpenses = async (req, res) => {
     res.json({ success: true, data: rows, pagination: { page, limit, total: count, totalPages: Math.ceil(count / limit) } });
   } catch (error) {
     console.error('Erreur getExpenses:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
-const getExpenseById = async (req, res) => {
+const getExpenseById = async (req, res, next) => {
   try {
     const expense = await Expense.findByPk(req.params.id);
     if (!expense) {
-      return res.status(404).json({ success: false, message: 'Dépense non trouvée' });
+      return res.status(404).json({ success: false, message: 'DÃ©pense non trouvÃ©e' });
     }
     res.json({ success: true, data: expense });
   } catch (error) {
     console.error('Erreur getExpenseById:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
-const createExpense = async (req, res) => {
+const createExpense = async (req, res, next) => {
   try {
     const { description, amount, category, date, paymentMethod, notes } = req.body;
 
@@ -43,52 +43,52 @@ const createExpense = async (req, res) => {
     const expense = await Expense.create({
       description,
       amount,
-      category: category || 'Général',
+      category: category || 'GÃ©nÃ©ral',
       date: date || new Date(),
-      paymentMethod: paymentMethod || 'Espèces',
+      paymentMethod: paymentMethod || 'EspÃ¨ces',
       notes,
       createdBy: req.user.id
     });
 
-    res.status(201).json({ success: true, data: expense, message: 'Dépense enregistrée' });
+    res.status(201).json({ success: true, data: expense, message: 'DÃ©pense enregistrÃ©e' });
   } catch (error) {
     console.error('Erreur createExpense:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
-const updateExpense = async (req, res) => {
+const updateExpense = async (req, res, next) => {
   try {
     const expense = await Expense.findByPk(req.params.id);
     if (!expense) {
-      return res.status(404).json({ success: false, message: 'Dépense non trouvée' });
+      return res.status(404).json({ success: false, message: 'DÃ©pense non trouvÃ©e' });
     }
 
     const { description, amount, category, date, paymentMethod, notes } = req.body;
     await expense.update({ description, amount, category, date, paymentMethod, notes });
-    res.json({ success: true, data: expense, message: 'Dépense mise à jour' });
+    res.json({ success: true, data: expense, message: 'DÃ©pense mise Ã  jour' });
   } catch (error) {
     console.error('Erreur updateExpense:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
-const deleteExpense = async (req, res) => {
+const deleteExpense = async (req, res, next) => {
   try {
     const expense = await Expense.findByPk(req.params.id);
     if (!expense) {
-      return res.status(404).json({ success: false, message: 'Dépense non trouvée' });
+      return res.status(404).json({ success: false, message: 'DÃ©pense non trouvÃ©e' });
     }
 
     await expense.destroy();
-    res.json({ success: true, message: 'Dépense supprimée avec succès' });
+    res.json({ success: true, message: 'DÃ©pense supprimÃ©e avec succÃ¨s' });
   } catch (error) {
     console.error('Erreur deleteExpense:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
-const getExpensesStats = async (req, res) => {
+const getExpensesStats = async (req, res, next) => {
   try {
     const { startDate, endDate, category } = req.query;
     
@@ -115,7 +115,7 @@ const getExpensesStats = async (req, res) => {
     });
   } catch (error) {
     console.error('Erreur getExpensesStats:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
@@ -127,3 +127,4 @@ module.exports = {
   deleteExpense,
   getExpensesStats
 };
+

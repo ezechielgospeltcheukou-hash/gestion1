@@ -1,8 +1,8 @@
-const Sale = require('../models/Sale');
+﻿const Sale = require('../models/Sale');
 const Product = require('../models/Product');
 const sequelize = require('../config/database');
 
-const getSales = async (req, res) => {
+const getSales = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
@@ -16,24 +16,24 @@ const getSales = async (req, res) => {
     res.json({ success: true, data: rows, pagination: { page, limit, total: count, totalPages: Math.ceil(count / limit) } });
   } catch (error) {
     console.error('Erreur getSales:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
-const getSaleById = async (req, res) => {
+const getSaleById = async (req, res, next) => {
   try {
     const sale = await Sale.findByPk(req.params.id);
     if (!sale) {
-      return res.status(404).json({ success: false, message: 'Vente non trouvée' });
+      return res.status(404).json({ success: false, message: 'Vente non trouvÃ©e' });
     }
     res.json({ success: true, data: sale });
   } catch (error) {
     console.error('Erreur getSaleById:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
-const createSale = async (req, res) => {
+const createSale = async (req, res, next) => {
   let transaction;
   try {
     transaction = await sequelize.transaction();
@@ -41,13 +41,13 @@ const createSale = async (req, res) => {
 
     if (!productId || !quantity) {
       await transaction.rollback();
-      return res.status(400).json({ success: false, message: 'Veuillez fournir produit et quantité' });
+      return res.status(400).json({ success: false, message: 'Veuillez fournir produit et quantitÃ©' });
     }
 
     const product = await Product.findByPk(productId, { transaction });
     if (!product) {
       await transaction.rollback();
-      return res.status(404).json({ success: false, message: 'Produit non trouvé' });
+      return res.status(404).json({ success: false, message: 'Produit non trouvÃ©' });
     }
 
     if (product.stock < quantity) {
@@ -63,7 +63,7 @@ const createSale = async (req, res) => {
       quantity,
       totalPrice,
       purchasePriceAtSale: product.purchasePrice,
-      paymentMethod: paymentMethod || 'Espèces',
+      paymentMethod: paymentMethod || 'EspÃ¨ces',
       transactionReference,
       soldBy: req.user.id,
       discount: discountAmount,
@@ -76,15 +76,15 @@ const createSale = async (req, res) => {
     );
 
     await transaction.commit();
-    res.status(201).json({ success: true, data: sale, message: 'Vente enregistrée' });
+    res.status(201).json({ success: true, data: sale, message: 'Vente enregistrÃ©e' });
   } catch (error) {
     if (transaction) await transaction.rollback().catch(() => {});
     console.error('Erreur createSale:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
-const deleteSale = async (req, res) => {
+const deleteSale = async (req, res, next) => {
   let transaction;
   try {
     transaction = await sequelize.transaction();
@@ -92,7 +92,7 @@ const deleteSale = async (req, res) => {
     const sale = await Sale.findByPk(req.params.id, { transaction });
     if (!sale) {
       await transaction.rollback();
-      return res.status(404).json({ success: false, message: 'Vente non trouvée' });
+      return res.status(404).json({ success: false, message: 'Vente non trouvÃ©e' });
     }
 
     const product = await Product.findByPk(sale.productId, { transaction });
@@ -105,15 +105,15 @@ const deleteSale = async (req, res) => {
 
     await sale.destroy({ transaction });
     await transaction.commit();
-    res.json({ success: true, message: 'Vente annulée et stock restitué' });
+    res.json({ success: true, message: 'Vente annulÃ©e et stock restituÃ©' });
   } catch (error) {
     if (transaction) await transaction.rollback().catch(() => {});
     console.error('Erreur deleteSale:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
-const getSalesStats = async (req, res) => {
+const getSalesStats = async (req, res, next) => {
   try {
     const { startDate, endDate } = req.query;
     
@@ -141,7 +141,7 @@ const getSalesStats = async (req, res) => {
     });
   } catch (error) {
     console.error('Erreur getSalesStats:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
@@ -152,3 +152,4 @@ module.exports = {
   deleteSale,
   getSalesStats
 };
+

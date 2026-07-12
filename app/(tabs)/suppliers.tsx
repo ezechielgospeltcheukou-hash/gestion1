@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+﻿import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal, ActivityIndicator, RefreshControl } from 'react-native';
 import { Truck, Plus, Edit, Trash2, Save, ArrowLeft, Search, Phone, Mail, MapPin, DollarSign } from 'lucide-react-native'; 
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,6 +7,14 @@ import { api } from '../../src/api/api';
 import type { Supplier } from '../../src/api/api';
 import { useThemeColors } from '../../src/theme/ThemeContext';
 
+// Helper pour afficher alertes sur web et mobile
+const showAlert = (title: string, message: string = '') => {
+  if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+    window.alert(message ? (title + '\n\n' + message) : title);
+  } else {
+    showAlert(title, message || undefined);
+  }
+};
 export default function SuppliersScreen() {
   const router = useRouter();
   const colors = useThemeColors();
@@ -41,7 +49,7 @@ export default function SuppliersScreen() {
       }
     } catch (error) {
       console.error('Error loading suppliers:', error);
-      Alert.alert('Erreur', 'Impossible de charger les fournisseurs');
+      showAlert('Erreur', 'Impossible de charger les fournisseurs');
     } finally {
       setLoading(false);
     }
@@ -69,7 +77,7 @@ export default function SuppliersScreen() {
 
   const handleSubmit = async () => {
     if (!formData.name.trim()) {
-      Alert.alert('Erreur', 'Le nom du fournisseur est requis');
+      showAlert('Erreur', 'Le nom du fournisseur est requis');
       return;
     }
 
@@ -90,21 +98,21 @@ export default function SuppliersScreen() {
       }
 
       if (response.success) {
-        Alert.alert('Succès', editingSupplier ? 'Fournisseur mis à jour' : 'Fournisseur ajouté');
+        showAlert('Succès', editingSupplier ? 'Fournisseur mis à jour' : 'Fournisseur ajouté');
         setModalVisible(false);
         resetForm();
         loadSuppliers();
       } else {
-        Alert.alert('Erreur', response.message || 'Une erreur est survenue');
+        showAlert('Erreur', response.message || 'Une erreur est survenue');
       }
     } catch (error) {
       console.error('Error saving supplier:', error);
-      Alert.alert('Erreur', 'Impossible de sauvegarder le fournisseur');
+      showAlert('Erreur', 'Impossible de sauvegarder le fournisseur');
     }
   };
 
   const handleDelete = (supplier: Supplier) => {
-    Alert.alert(
+    showAlert(
       'Confirmation',
       `Êtes-vous sûr de vouloir supprimer ${supplier.name} ?`,
       [
@@ -116,14 +124,14 @@ export default function SuppliersScreen() {
             try {
               const response = await api.deleteSupplier(supplier.id!);
               if (response.success) {
-                Alert.alert('Succès', 'Fournisseur supprimé');
+                showAlert('Succès', 'Fournisseur supprimé');
                 loadSuppliers();
               } else {
-                Alert.alert('Erreur', response.message || 'Une erreur est survenue');
+                showAlert('Erreur', response.message || 'Une erreur est survenue');
               }
             } catch (error) {
               console.error('Error deleting supplier:', error);
-              Alert.alert('Erreur', 'Impossible de supprimer le fournisseur');
+              showAlert('Erreur', 'Impossible de supprimer le fournisseur');
             }
           }
         }
@@ -431,3 +439,4 @@ const styles = StyleSheet.create({
   },
   submitButtonText: { color: 'white', fontSize: 18, fontWeight: 'bold' }
 });
+

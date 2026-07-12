@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+﻿import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal, ActivityIndicator, Animated, RefreshControl } from 'react-native';
 import { Package, Plus, Edit, Trash2, Save, ArrowLeft, Search } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,6 +7,14 @@ import { api } from '../../src/api/api';
 import { useThemeColors } from '../../src/theme/ThemeContext';
 import type { Product } from '../../src/api/api';
 
+// Helper pour afficher alertes sur web et mobile
+const showAlert = (title: string, message: string = '') => {
+  if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+    window.alert(message ? (title + '\n\n' + message) : title);
+  } else {
+    showAlert(title, message || undefined);
+  }
+};
 function ProductListItem({ product, index, onEdit, onDelete }: { 
   product: Product; 
   index: number; 
@@ -102,7 +110,7 @@ export default function InventoryScreen() {
       }
     } catch (error) {
       console.error('Error loading products:', error);
-      Alert.alert('Erreur', 'Impossible de charger les produits');
+      showAlert('Erreur', 'Impossible de charger les produits');
     } finally {
       setLoading(false);
     }
@@ -147,7 +155,7 @@ export default function InventoryScreen() {
 
   const handleSubmit = async () => {
     if (!formData.name.trim() || !formData.price) {
-      Alert.alert('Erreur', 'Le nom et le prix du produit sont obligatoires');
+      showAlert('Erreur', 'Le nom et le prix du produit sont obligatoires');
       return;
     }
 
@@ -171,21 +179,21 @@ export default function InventoryScreen() {
       }
 
       if (response.success) {
-        Alert.alert('Succès', editingProduct ? 'Produit mis à jour' : 'Produit ajouté');
+        showAlert('Succès', editingProduct ? 'Produit mis à jour' : 'Produit ajouté');
         setModalVisible(false);
         resetForm();
         loadProducts();
       } else {
-        Alert.alert('Erreur', response.message || 'Une erreur est survenue');
+        showAlert('Erreur', response.message || 'Une erreur est survenue');
       }
     } catch (error) {
       console.error('Error saving product:', error);
-      Alert.alert('Erreur', 'Impossible de sauvegarder le produit');
+      showAlert('Erreur', 'Impossible de sauvegarder le produit');
     }
   };
 
   const handleDelete = (product: Product) => {
-    Alert.alert(
+    showAlert(
       'Confirmation',
       `Êtes-vous sûr de vouloir supprimer ${product.name} ?`,
       [
@@ -197,14 +205,14 @@ export default function InventoryScreen() {
             try {
               const response = await api.deleteProduct(product.id!);
               if (response.success) {
-                Alert.alert('Succès', 'Produit supprimé');
+                showAlert('Succès', 'Produit supprimé');
                 loadProducts();
               } else {
-                Alert.alert('Erreur', response.message || 'Une erreur est survenue');
+                showAlert('Erreur', response.message || 'Une erreur est survenue');
               }
             } catch (error) {
               console.error('Error deleting product:', error);
-              Alert.alert('Erreur', 'Impossible de supprimer le produit');
+              showAlert('Erreur', 'Impossible de supprimer le produit');
             }
           }
         }
@@ -528,3 +536,4 @@ const styles = StyleSheet.create({
   },
   submitButtonText: { color: 'white', fontSize: 18, fontWeight: 'bold' }
 });
+

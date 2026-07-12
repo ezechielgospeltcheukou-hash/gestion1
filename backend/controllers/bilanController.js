@@ -1,4 +1,4 @@
-const { Op } = require('sequelize');
+﻿const { Op } = require('sequelize');
 const Sale = require('../models/Sale');
 const Product = require('../models/Product');
 const Expense = require('../models/Expense');
@@ -8,7 +8,7 @@ const Client = require('../models/Client');
 const Supplier = require('../models/Supplier');
 const Invoice = require('../models/Invoice');
 
-const getBilan = async (req, res) => {
+const getBilan = async (req, res, next) => {
   try {
     const now = new Date();
     const today = new Date(now);
@@ -186,3 +186,4 @@ const getBilan = async (req, res) => {
 };
 
 module.exports = { getBilan };
+

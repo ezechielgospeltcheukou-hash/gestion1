@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+﻿import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal, ActivityIndicator, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Users, Plus, Edit, Trash2, Save, ArrowLeft, Shield, RefreshCw, MapPin, Eye } from 'lucide-react-native'; 
@@ -7,6 +7,14 @@ import { api } from '../src/api/api';
 import type { Employee, Permissions } from '../src/api/api';
 import { useTheme, useThemeColors } from '../src/theme/ThemeContext';
 
+// Helper pour afficher alertes sur web et mobile
+const showAlert = (title: string, message: string = '') => {
+  if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+    window.alert(message ? (title + '\n\n' + message) : title);
+  } else {
+    showAlert(title, message || undefined);
+  }
+};
 const defaultPermissions: Permissions = {
   sales: true,
   inventory: true,
@@ -73,7 +81,7 @@ export default function EmployeesScreen() {
       }
     } catch (error) {
       console.error('Error loading employees:', error);
-      Alert.alert('Erreur', 'Impossible de charger les employés');
+      showAlert('Erreur', 'Impossible de charger les employés');
     } finally {
       setLoading(false);
     }
@@ -87,12 +95,12 @@ export default function EmployeesScreen() {
 
   const handleSubmit = async () => {
     if (!formData.username) {
-      Alert.alert('Erreur', 'Le nom d\'utilisateur est requis');
+      showAlert('Erreur', 'Le nom d\'utilisateur est requis');
       return;
     }
 
     if (!editingEmployee && !formData.password) {
-      Alert.alert('Erreur', 'Le mot de passe est requis');
+      showAlert('Erreur', 'Le mot de passe est requis');
       return;
     }
 
@@ -124,21 +132,21 @@ export default function EmployeesScreen() {
       }
 
       if (response.success) {
-        Alert.alert('Succes', editingEmployee ? 'Employe mis a jour' : 'Employe ajoute avec succes !');
+        showAlert('Succes', editingEmployee ? 'Employe mis a jour' : 'Employe ajoute avec succes !');
         setModalVisible(false);
         resetForm();
         loadEmployees();
       } else {
-        Alert.alert('Erreur', response.message || 'Une erreur est survenue');
+        showAlert('Erreur', response.message || 'Une erreur est survenue');
       }
     } catch (error) {
       console.error('Error saving employee:', error);
-      Alert.alert('Erreur', 'Impossible de sauvegarder l\'employe: ' + (error as Error).message);
+      showAlert('Erreur', 'Impossible de sauvegarder l\'employe: ' + (error as Error).message);
     }
   };
 
   const handleDelete = (employee: Employee) => {
-    Alert.alert(
+    showAlert(
       'Confirmation',
       `Êtes-vous sûr de vouloir supprimer ${employee.username} ?`,
       [
@@ -150,14 +158,14 @@ export default function EmployeesScreen() {
             try {
               const response = await api.deleteEmployee(employee.id!);
               if (response.success) {
-                Alert.alert('Succès', 'Employé supprimé');
+                showAlert('Succès', 'Employé supprimé');
                 loadEmployees();
               } else {
-                Alert.alert('Erreur', response.message || 'Une erreur est survenue');
+                showAlert('Erreur', response.message || 'Une erreur est survenue');
               }
             } catch (error) {
               console.error('Error deleting employee:', error);
-              Alert.alert('Erreur', 'Impossible de supprimer l\'employé');
+              showAlert('Erreur', 'Impossible de supprimer l\'employé');
             }
           }
         }
@@ -166,7 +174,7 @@ export default function EmployeesScreen() {
   };
 
   const handleResetCode = (employee: Employee) => {
-    Alert.alert(
+    showAlert(
       'Réinitialiser le code',
       `Voulez-vous générer un nouveau code employé pour ${employee.username} ?\n\nAncien code: ${employee.employeeCode || 'N/A'}`,
       [
@@ -179,14 +187,14 @@ export default function EmployeesScreen() {
               setResettingCode(employee.id!);
               const response = await api.resetEmployeeCode(employee.id!);
               if (response.success) {
-                Alert.alert('Nouveau code', `Le nouveau code de ${employee.username} est:\n\n${response.data?.employeeCode || 'N/A'}\n\nCommuniquez ce code à l'employé.`);
+                showAlert('Nouveau code', `Le nouveau code de ${employee.username} est:\n\n${response.data?.employeeCode || 'N/A'}\n\nCommuniquez ce code à l'employé.`);
                 loadEmployees();
               } else {
-                Alert.alert('Erreur', response.message || 'Impossible de réinitialiser le code');
+                showAlert('Erreur', response.message || 'Impossible de réinitialiser le code');
               }
             } catch (error) {
               console.error('Error resetting code:', error);
-              Alert.alert('Erreur', 'Impossible de réinitialiser le code');
+              showAlert('Erreur', 'Impossible de réinitialiser le code');
             } finally {
               setResettingCode(null);
             }
@@ -197,7 +205,7 @@ export default function EmployeesScreen() {
   };
 
   const handleCopyCode = (code: string) => {
-    Alert.alert('Code Employé', `Le code de cet employé est:\n\n${code}\n\nNotez-le et communiquez-le à l'employé.`);
+    showAlert('Code Employé', `Le code de cet employé est:\n\n${code}\n\nNotez-le et communiquez-le à l'employé.`);
   };
 
   const resetForm = () => {
@@ -653,3 +661,4 @@ const styles = StyleSheet.create({
   },
   submitButtonText: { color: 'white', fontSize: 18, fontWeight: 'bold' }
 });
+

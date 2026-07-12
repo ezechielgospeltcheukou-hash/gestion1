@@ -1,10 +1,18 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { User, Lock, Store, ArrowRight, BookOpen, LogIn, Mail, Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react-native';
 import { api } from '../../src/api/api';
 import { useThemeColors } from '../../src/theme/ThemeContext';
 
+// Helper pour afficher alertes sur web et mobile
+const showAlert = (title: string, message: string = '') => {
+  if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+    window.alert(message ? (title + '\n\n' + message) : title);
+  } else {
+    showAlert(title, message || undefined);
+  }
+};
 export default function RegisterScreen() {
   const router = useRouter();
   const colors = useThemeColors();
@@ -87,7 +95,7 @@ export default function RegisterScreen() {
         if (Platform.OS === 'web') {
           window.alert('Erreur\n\n' + msg);
         } else {
-          Alert.alert('Erreur', msg);
+          showAlert('Erreur', msg);
         }
       }
     } catch (error) {
@@ -97,7 +105,7 @@ export default function RegisterScreen() {
       if (Platform.OS === 'web') {
         window.alert('Erreur\n\n' + msg);
       } else {
-        Alert.alert('Erreur', msg);
+        showAlert('Erreur', msg);
       }
     } finally {
       setLoading(false);
@@ -394,3 +402,4 @@ const styles = StyleSheet.create({
   },
   footerText: { color: '#9ca3af', fontSize: 12, marginTop: 4 }
 });
+

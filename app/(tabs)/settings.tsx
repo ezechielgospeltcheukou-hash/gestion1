@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+﻿import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Switch, ScrollView, Alert, Modal, TextInput, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, User, Bell, Lock, HelpCircle, LogOut, Edit, Save } from 'lucide-react-native';
@@ -7,6 +7,14 @@ import { api } from '../../src/api/api';
 import { storage } from '../../src/utils/storage';
 import { useTheme, useThemeColors } from '../../src/theme/ThemeContext';
 
+// Helper pour afficher alertes sur web et mobile
+const showAlert = (title: string, message: string = '') => {
+  if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+    window.alert(message ? (title + '\n\n' + message) : title);
+  } else {
+    showAlert(title, message || undefined);
+  }
+};
 function SettingItem({ icon: Icon, title, subtitle, onPress, rightComponent }: { 
   icon: any; 
   title: string; 
@@ -113,7 +121,7 @@ export default function SettingsScreen() {
 
   const handleSaveProfile = async () => {
     if (!editForm.username.trim()) {
-      Alert.alert('Erreur', 'Le nom d\'utilisateur est obligatoire');
+      showAlert('Erreur', 'Le nom d\'utilisateur est obligatoire');
       return;
     }
 
@@ -124,14 +132,14 @@ export default function SettingsScreen() {
       
       if (response.success) {
         setUser({ ...user, ...response.data });
-        Alert.alert('Succès', 'Profil mis à jour');
+        showAlert('Succès', 'Profil mis à jour');
         setEditModalVisible(false);
       } else {
-        Alert.alert('Erreur', response.message || 'Impossible de mettre à jour le profil');
+        showAlert('Erreur', response.message || 'Impossible de mettre à jour le profil');
       }
     } catch (error) {
       console.error('Error updating profile:', error);
-      Alert.alert('Erreur', 'Impossible de mettre à jour le profil');
+      showAlert('Erreur', 'Impossible de mettre à jour le profil');
     } finally {
       setSaving(false);
     }
@@ -151,7 +159,7 @@ export default function SettingsScreen() {
       return;
     }
 
-    Alert.alert(
+    showAlert(
       'Déconnexion',
       'Êtes-vous sûr de vouloir vous déconnecter ?',
       [
@@ -512,3 +520,4 @@ const styles = StyleSheet.create({
   saveButtonDisabled: { opacity: 0.7 },
   saveButtonText: { color: 'white', fontSize: 18, fontWeight: 'bold' },
 });
+

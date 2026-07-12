@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+﻿import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal, ActivityIndicator, RefreshControl } from 'react-native';
 import { User, Plus, Edit, Trash2, Save, ArrowLeft, Search, Phone, MapPin, Mail, DollarSign } from 'lucide-react-native'; 
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,6 +7,14 @@ import { api } from '../../src/api/api';
 import type { Client } from '../../src/api/api';
 import { useThemeColors } from '../../src/theme/ThemeContext';
 
+// Helper pour afficher alertes sur web et mobile
+const showAlert = (title: string, message: string = '') => {
+  if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+    window.alert(message ? (title + '\n\n' + message) : title);
+  } else {
+    showAlert(title, message || undefined);
+  }
+};
 export default function ClientsScreen() {
   const router = useRouter();
   const colors = useThemeColors();
@@ -40,7 +48,7 @@ export default function ClientsScreen() {
       }
     } catch (error) {
       console.error('Error loading clients:', error);
-      Alert.alert('Erreur', 'Impossible de charger les clients');
+      showAlert('Erreur', 'Impossible de charger les clients');
     } finally {
       setLoading(false);
     }
@@ -68,7 +76,7 @@ export default function ClientsScreen() {
 
   const handleSubmit = async () => {
     if (!formData.name.trim()) {
-      Alert.alert('Erreur', 'Le nom du client est requis');
+      showAlert('Erreur', 'Le nom du client est requis');
       return;
     }
 
@@ -88,21 +96,21 @@ export default function ClientsScreen() {
       }
 
       if (response.success) {
-        Alert.alert('Succès', editingClient ? 'Client mis à jour' : 'Client ajouté');
+        showAlert('Succès', editingClient ? 'Client mis à jour' : 'Client ajouté');
         setModalVisible(false);
         resetForm();
         loadClients();
       } else {
-        Alert.alert('Erreur', response.message || 'Une erreur est survenue');
+        showAlert('Erreur', response.message || 'Une erreur est survenue');
       }
     } catch (error) {
       console.error('Error saving client:', error);
-      Alert.alert('Erreur', 'Impossible de sauvegarder le client');
+      showAlert('Erreur', 'Impossible de sauvegarder le client');
     }
   };
 
   const handleDelete = (client: Client) => {
-    Alert.alert(
+    showAlert(
       'Confirmation',
       `Êtes-vous sûr de vouloir supprimer ${client.name} ?`,
       [
@@ -114,14 +122,14 @@ export default function ClientsScreen() {
             try {
               const response = await api.deleteClient(client.id!);
               if (response.success) {
-                Alert.alert('Succès', 'Client supprimé');
+                showAlert('Succès', 'Client supprimé');
                 loadClients();
               } else {
-                Alert.alert('Erreur', response.message || 'Une erreur est survenue');
+                showAlert('Erreur', response.message || 'Une erreur est survenue');
               }
             } catch (error) {
               console.error('Error deleting client:', error);
-              Alert.alert('Erreur', 'Impossible de supprimer le client');
+              showAlert('Erreur', 'Impossible de supprimer le client');
             }
           }
         }
@@ -409,3 +417,4 @@ const styles = StyleSheet.create({
   },
   submitButtonText: { color: 'white', fontSize: 18, fontWeight: 'bold' }
 });
+

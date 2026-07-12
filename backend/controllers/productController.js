@@ -1,6 +1,6 @@
-const Product = require('../models/Product');
+﻿const Product = require('../models/Product');
 
-const getProducts = async (req, res) => {
+const getProducts = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
@@ -15,24 +15,24 @@ const getProducts = async (req, res) => {
     res.json({ success: true, data: rows, pagination: { page, limit, total: count, totalPages: Math.ceil(count / limit) } });
   } catch (error) {
     console.error('Erreur getProducts:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
-const getProductById = async (req, res) => {
+const getProductById = async (req, res, next) => {
   try {
     const product = await Product.findByPk(req.params.id);
     if (!product) {
-      return res.status(404).json({ success: false, message: 'Produit non trouvé' });
+      return res.status(404).json({ success: false, message: 'Produit non trouvÃ©' });
     }
     res.json({ success: true, data: product });
   } catch (error) {
     console.error('Erreur getProductById:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
-const createProduct = async (req, res) => {
+const createProduct = async (req, res, next) => {
   try {
     const { name, description, price, purchasePrice, stock, category, barcode, expirationDate, lowStockAlert } = req.body;
 
@@ -46,61 +46,61 @@ const createProduct = async (req, res) => {
       price,
       purchasePrice: purchasePrice || 0,
       stock: stock || 0,
-      category: category || 'Général',
+      category: category || 'GÃ©nÃ©ral',
       barcode,
       expirationDate,
       lowStockAlert: lowStockAlert || 5,
       createdBy: req.user.id
     });
 
-    res.status(201).json({ success: true, data: product, message: 'Produit créé' });
+    res.status(201).json({ success: true, data: product, message: 'Produit crÃ©Ã©' });
   } catch (error) {
     console.error('Erreur createProduct:', error);
     if (error.name === 'SequelizeUniqueConstraintError') {
-      return res.status(400).json({ success: false, message: 'Ce code barre existe déjà' });
+      return res.status(400).json({ success: false, message: 'Ce code barre existe dÃ©jÃ ' });
     }
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
-const updateProduct = async (req, res) => {
+const updateProduct = async (req, res, next) => {
   try {
     const product = await Product.findByPk(req.params.id);
     if (!product) {
-      return res.status(404).json({ success: false, message: 'Produit non trouvé' });
+      return res.status(404).json({ success: false, message: 'Produit non trouvÃ©' });
     }
 
     const { name, description, price, purchasePrice, stock, category, barcode, expirationDate, lowStockAlert } = req.body;
     await product.update({ name, description, price, purchasePrice, stock, category, barcode, expirationDate, lowStockAlert });
-    res.json({ success: true, data: product, message: 'Produit mis à jour' });
+    res.json({ success: true, data: product, message: 'Produit mis Ã  jour' });
   } catch (error) {
     console.error('Erreur updateProduct:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
-const deleteProduct = async (req, res) => {
+const deleteProduct = async (req, res, next) => {
   try {
     const product = await Product.findByPk(req.params.id);
     if (!product) {
-      return res.status(404).json({ success: false, message: 'Produit non trouvé' });
+      return res.status(404).json({ success: false, message: 'Produit non trouvÃ©' });
     }
 
     await product.update({ isActive: false });
-    res.json({ success: true, message: 'Produit désactivé avec succès' });
+    res.json({ success: true, message: 'Produit dÃ©sactivÃ© avec succÃ¨s' });
   } catch (error) {
     console.error('Erreur deleteProduct:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
-const adjustStock = async (req, res) => {
+const adjustStock = async (req, res, next) => {
   try {
     const { quantity } = req.body;
     const product = await Product.findByPk(req.params.id);
 
     if (!product) {
-      return res.status(404).json({ success: false, message: 'Produit non trouvé' });
+      return res.status(404).json({ success: false, message: 'Produit non trouvÃ©' });
     }
 
     const newStock = product.stock + quantity;
@@ -109,10 +109,10 @@ const adjustStock = async (req, res) => {
     }
 
     await product.update({ stock: newStock });
-    res.json({ success: true, data: product, message: 'Stock mis à jour' });
+    res.json({ success: true, data: product, message: 'Stock mis Ã  jour' });
   } catch (error) {
     console.error('Erreur adjustStock:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
@@ -124,3 +124,4 @@ module.exports = {
   deleteProduct,
   adjustStock
 };
+

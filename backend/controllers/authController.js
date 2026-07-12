@@ -7,7 +7,7 @@ const generateToken = (id) => {
   });
 };
 
-const register = async (req, res) => {
+const register = async (req, res, next) => {
   try {
     const { username, email, password, businessName } = req.body;
 
@@ -16,28 +16,27 @@ const register = async (req, res) => {
     }
 
     const userExists = await User.findOne({ where: { username } });
-
     if (userExists) {
-      return res.status(400).json({ success: false, message: 'Cet utilisateur existe déjà' });
+      return res.status(400).json({ success: false, message: 'Ce nom d\'utilisateur est deja utilise' });
     }
 
     if (email) {
       const emailExists = await User.findOne({ where: { email } });
       if (emailExists) {
-        return res.status(400).json({ success: false, message: 'Cet email est déjà utilisé par un autre compte' });
+        return res.status(400).json({ success: false, message: 'Cet email est deja utilise par un autre compte' });
       }
     }
 
     const user = await User.create({
       username,
-      email,
+      email: email || null,
       password,
       businessName,
       role: 'ADMIN',
-      permissions: { 
-        sales: true, inventory: true, clients: true, suppliers: true, 
-        expenses: true, invoices: true, cash: true, reports: true, 
-        appointments: true, credits: true, messages: true, employees: true 
+      permissions: {
+        sales: true, inventory: true, clients: true, suppliers: true,
+        expenses: true, invoices: true, cash: true, reports: true,
+        appointments: true, credits: true, messages: true, employees: true
       }
     });
 
@@ -46,20 +45,22 @@ const register = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      data: {
-        ...userWithoutPassword,
-        token: generateToken(user.id)
-      },
-      message: 'Inscription réussie'
+      data: { ...userWithoutPassword, token: generateToken(user.id) },
+      message: 'Inscription reussie'
     });
 
   } catch (error) {
     console.error('Erreur inscription:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      const field = error.errors[0]?.path;
+      if (field === 'email') return res.status(400).json({ success: false, message: 'Cet email est deja utilise' });
+      if (field === 'username') return res.status(400).json({ success: false, message: 'Ce nom d\'utilisateur est deja utilise' });
+    }
+    next(error);
   }
 };
 
-const login = async (req, res) => {
+const login = async (req, res, next) => {
   try {
     const { username, password } = req.body;
 
@@ -68,26 +69,23 @@ const login = async (req, res) => {
     if (user && (await user.comparePassword(password)) && user.isActive) {
       const userWithoutPassword = { ...user.get() };
       delete userWithoutPassword.password;
-      
+
       res.json({
         success: true,
-        data: {
-          ...userWithoutPassword,
-          token: generateToken(user.id)
-        },
-        message: 'Connexion réussie'
+        data: { ...userWithoutPassword, token: generateToken(user.id) },
+        message: 'Connexion reussie'
       });
     } else {
-      res.status(401).json({ success: false, message: 'Identifiants invalides ou compte désactivé' });
+      res.status(401).json({ success: false, message: 'Identifiants invalides ou compte desactive' });
     }
 
   } catch (error) {
     console.error('Erreur connexion:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
-const loginByCode = async (req, res) => {
+const loginByCode = async (req, res, next) => {
   try {
     const { employeeCode, password } = req.body;
 
@@ -98,11 +96,11 @@ const loginByCode = async (req, res) => {
     const user = await User.findOne({ where: { employeeCode: employeeCode.toUpperCase() } });
 
     if (!user) {
-      return res.status(401).json({ success: false, message: 'Code employé invalide' });
+      return res.status(401).json({ success: false, message: 'Code employe invalide' });
     }
 
     if (!user.isActive) {
-      return res.status(401).json({ success: false, message: 'Votre compte a été désactivé. Contactez l\'administrateur.' });
+      return res.status(401).json({ success: false, message: 'Votre compte a ete desactive. Contactez l\'administrateur.' });
     }
 
     const isPasswordValid = await user.comparePassword(password);
@@ -116,20 +114,17 @@ const loginByCode = async (req, res) => {
 
     res.json({
       success: true,
-      data: {
-        ...userWithoutPassword,
-        token: generateToken(user.id)
-      },
-      message: 'Connexion réussie'
+      data: { ...userWithoutPassword, token: generateToken(user.id) },
+      message: 'Connexion reussie'
     });
 
   } catch (error) {
     console.error('Erreur loginByCode:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
-const getMe = async (req, res) => {
+const getMe = async (req, res, next) => {
   try {
     const user = await User.findByPk(req.user.id, {
       attributes: { exclude: ['password'] }
@@ -137,18 +132,18 @@ const getMe = async (req, res) => {
     res.json({ success: true, data: user });
   } catch (error) {
     console.error('Erreur getMe:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
-const updateProfile = async (req, res) => {
+const updateProfile = async (req, res, next) => {
   try {
     const { username, email, phone, address, locality, salary, businessName } = req.body;
 
     const user = await User.findByPk(req.user.id);
 
     if (!user) {
-      return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+      return res.status(404).json({ success: false, message: 'Utilisateur non trouve' });
     }
 
     await user.update({
@@ -164,14 +159,14 @@ const updateProfile = async (req, res) => {
     const userWithoutPassword = { ...user.get() };
     delete userWithoutPassword.password;
 
-    res.json({ success: true, data: userWithoutPassword, message: 'Profil mis à jour' });
+    res.json({ success: true, data: userWithoutPassword, message: 'Profil mis a jour' });
   } catch (error) {
     console.error('Erreur updateProfile:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
-const refreshToken = async (req, res) => {
+const refreshToken = async (req, res, next) => {
   try {
     const { refreshToken } = req.body;
     if (!refreshToken) {
@@ -184,23 +179,22 @@ const refreshToken = async (req, res) => {
     }
 
     const newToken = generateToken(user.id);
-
     await user.update({ refreshToken: refreshToken });
 
     res.json({ success: true, data: { token: newToken } });
   } catch (error) {
     console.error('Erreur refreshToken:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
-const logout = async (req, res) => {
+const logout = async (req, res, next) => {
   try {
     await User.update({ refreshToken: null }, { where: { id: req.user.id } });
-    res.json({ success: true, message: 'Déconnexion réussie' });
+    res.json({ success: true, message: 'Deconnexion reussie' });
   } catch (error) {
     console.error('Erreur logout:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+﻿import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal, ActivityIndicator, Animated, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -7,6 +7,14 @@ import { api } from '../../src/api/api';
 import { useThemeColors } from '../../src/theme/ThemeContext';
 import type { Product, Sale } from '../../src/api/api';
 
+// Helper pour afficher alertes sur web et mobile
+const showAlert = (title: string, message: string = '') => {
+  if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+    window.alert(message ? (title + '\n\n' + message) : title);
+  } else {
+    showAlert(title, message || undefined);
+  }
+};
 function SaleItem({ sale, index, products, onDelete, getProductName }: { sale: Sale, index: number, products: Product[], onDelete: (sale: Sale) => void, getProductName: (id: number) => string }) {
   const itemFadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -126,7 +134,7 @@ export default function SalesScreen() {
       }
     } catch (error) {
       console.error('Error loading data:', error);
-      Alert.alert('Erreur', 'Impossible de charger les données');
+      showAlert('Erreur', 'Impossible de charger les données');
     } finally {
       setLoading(false);
     }
@@ -140,7 +148,7 @@ export default function SalesScreen() {
 
   const handleSubmit = async () => {
     if (!formData.productId || formData.quantity <= 0) {
-      Alert.alert('Erreur', 'Veuillez sélectionner un produit et une quantité valide');
+      showAlert('Erreur', 'Veuillez sélectionner un produit et une quantité valide');
       return;
     }
 
@@ -156,20 +164,20 @@ export default function SalesScreen() {
         totalPrice
       });
       if (response.success) {
-        Alert.alert('Succès', 'Vente enregistrée');
+        showAlert('Succès', 'Vente enregistrée');
         setModalVisible(false);
         loadData();
       } else {
-        Alert.alert('Erreur', response.message || 'Impossible d\'enregistrer la vente');
+        showAlert('Erreur', response.message || 'Impossible d\'enregistrer la vente');
       }
     } catch (error) {
       console.error('Error creating sale:', error);
-      Alert.alert('Erreur', 'Impossible d\'enregistrer la vente');
+      showAlert('Erreur', 'Impossible d\'enregistrer la vente');
     }
   };
 
   const handleDelete = (sale: Sale) => {
-    Alert.alert(
+    showAlert(
       'Confirmation',
       'Êtes-vous sûr de vouloir annuler cette vente ?',
       [
@@ -181,14 +189,14 @@ export default function SalesScreen() {
             try {
               const response = await api.deleteSale(sale.id!);
               if (response.success) {
-                Alert.alert('Succès', 'Vente annulée');
+                showAlert('Succès', 'Vente annulée');
                 loadData();
               } else {
-                Alert.alert('Erreur', response.message || 'Impossible d\'annuler la vente');
+                showAlert('Erreur', response.message || 'Impossible d\'annuler la vente');
               }
             } catch (error) {
               console.error('Error deleting sale:', error);
-              Alert.alert('Erreur', 'Impossible d\'annuler la vente');
+              showAlert('Erreur', 'Impossible d\'annuler la vente');
             }
           }
         }
@@ -539,3 +547,4 @@ const styles = StyleSheet.create({
   },
   submitButtonText: { color: 'white', fontSize: 18, fontWeight: 'bold' }
 });
+

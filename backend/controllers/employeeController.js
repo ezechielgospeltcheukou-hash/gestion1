@@ -1,6 +1,6 @@
 const User = require('../models/User');
 
-const getEmployees = async (req, res) => {
+const getEmployees = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
@@ -14,11 +14,11 @@ const getEmployees = async (req, res) => {
     res.json({ success: true, data: rows, pagination: { page, limit, total: count, totalPages: Math.ceil(count / limit) } });
   } catch (error) {
     console.error('Erreur getEmployees:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
-const createEmployee = async (req, res) => {
+const createEmployee = async (req, res, next) => {
   try {
     const { username, email, password, phone, address, salary, locality, role, permissions } = req.body;
 
@@ -27,40 +27,51 @@ const createEmployee = async (req, res) => {
     }
 
     const userExists = await User.findOne({ where: { username } });
-
     if (userExists) {
-      return res.status(400).json({ success: false, message: 'Cet utilisateur existe déjà' });
+      return res.status(400).json({ success: false, message: 'Ce nom d\'utilisateur est deja utilise' });
+    }
+
+    if (email) {
+      const emailExists = await User.findOne({ where: { email } });
+      if (emailExists) {
+        return res.status(400).json({ success: false, message: 'Cet email est deja utilise' });
+      }
     }
 
     const employee = await User.create({
       username,
-      email,
+      email: email || null,
       password,
       phone,
       address,
       salary,
       locality,
       role: role || 'EMPLOYEE',
-      permissions: role === 'ADMIN' 
-        ? { 
-            sales: true, inventory: true, clients: true, suppliers: true, 
-            expenses: true, invoices: true, cash: true, reports: true, 
-            appointments: true, credits: true, messages: true, employees: true 
-          } 
+      permissions: role === 'ADMIN'
+        ? {
+            sales: true, inventory: true, clients: true, suppliers: true,
+            expenses: true, invoices: true, cash: true, reports: true,
+            appointments: true, credits: true, messages: true, employees: true
+          }
         : permissions
     });
 
     const employeeWithoutPassword = { ...employee.get() };
     delete employeeWithoutPassword.password;
 
-    res.status(201).json({ success: true, data: employeeWithoutPassword, message: 'Employé ajouté avec succès' });
+    res.status(201).json({ success: true, data: employeeWithoutPassword, message: 'Employe ajoute avec succes' });
   } catch (error) {
     console.error('Erreur createEmployee:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      const field = error.errors[0]?.path;
+      if (field === 'email') return res.status(400).json({ success: false, message: 'Cet email est deja utilise' });
+      if (field === 'username') return res.status(400).json({ success: false, message: 'Ce nom d\'utilisateur est deja utilise' });
+    }
+    next(error);
   }
 };
 
-const updateEmployee = async (req, res) => {
+const updateEmployee = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { username, email, phone, address, salary, locality, isActive, role, permissions } = req.body;
@@ -68,7 +79,7 @@ const updateEmployee = async (req, res) => {
     const employee = await User.findByPk(id);
 
     if (!employee) {
-      return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+      return res.status(404).json({ success: false, message: 'Utilisateur non trouve' });
     }
 
     await employee.update({
@@ -80,54 +91,53 @@ const updateEmployee = async (req, res) => {
       locality,
       isActive,
       role,
-      permissions: role === 'ADMIN' 
-        ? { 
-            sales: true, inventory: true, clients: true, suppliers: true, 
-            expenses: true, invoices: true, cash: true, reports: true, 
-            appointments: true, credits: true, messages: true, employees: true 
-          } 
+      permissions: role === 'ADMIN'
+        ? {
+            sales: true, inventory: true, clients: true, suppliers: true,
+            expenses: true, invoices: true, cash: true, reports: true,
+            appointments: true, credits: true, messages: true, employees: true
+          }
         : permissions
     });
 
     const employeeWithoutPassword = { ...employee.get() };
     delete employeeWithoutPassword.password;
 
-    res.json({ success: true, data: employeeWithoutPassword, message: 'Employé mis à jour' });
+    res.json({ success: true, data: employeeWithoutPassword, message: 'Employe mis a jour' });
   } catch (error) {
     console.error('Erreur updateEmployee:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
-const deleteEmployee = async (req, res) => {
+const deleteEmployee = async (req, res, next) => {
   try {
     const { id } = req.params;
 
     const employee = await User.findByPk(id);
 
     if (!employee) {
-      return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+      return res.status(404).json({ success: false, message: 'Utilisateur non trouve' });
     }
 
     await employee.destroy();
-    res.json({ success: true, message: 'Utilisateur supprimé avec succès' });
+    res.json({ success: true, message: 'Utilisateur supprime avec succes' });
   } catch (error) {
     console.error('Erreur deleteEmployee:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
-const resetEmployeeCode = async (req, res) => {
+const resetEmployeeCode = async (req, res, next) => {
   try {
     const { id } = req.params;
 
     const employee = await User.findByPk(id);
 
     if (!employee) {
-      return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+      return res.status(404).json({ success: false, message: 'Utilisateur non trouve' });
     }
 
-    // Generate new unique code
     const lastUser = await User.findOne({
       order: [['id', 'DESC']],
       where: { role: 'EMPLOYEE' }
@@ -142,14 +152,14 @@ const resetEmployeeCode = async (req, res) => {
     const employeeWithoutPassword = { ...employee.get() };
     delete employeeWithoutPassword.password;
 
-    res.json({ 
-      success: true, 
-      data: employeeWithoutPassword, 
-      message: `Nouveau code généré: ${newCode}` 
+    res.json({
+      success: true,
+      data: employeeWithoutPassword,
+      message: `Nouveau code genere: ${newCode}`
     });
   } catch (error) {
     console.error('Erreur resetEmployeeCode:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 

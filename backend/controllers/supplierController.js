@@ -1,8 +1,8 @@
-const Supplier = require('../models/Supplier');
+﻿const Supplier = require('../models/Supplier');
 const SupplierPayment = require('../models/SupplierPayment');
 const sequelize = require('../config/database');
 
-const getSuppliers = async (req, res) => {
+const getSuppliers = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
@@ -17,24 +17,24 @@ const getSuppliers = async (req, res) => {
     res.json({ success: true, data: rows, pagination: { page, limit, total: count, totalPages: Math.ceil(count / limit) } });
   } catch (error) {
     console.error('Erreur getSuppliers:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
-const getSupplierById = async (req, res) => {
+const getSupplierById = async (req, res, next) => {
   try {
     const supplier = await Supplier.findByPk(req.params.id);
     if (!supplier) {
-      return res.status(404).json({ success: false, message: 'Fournisseur non trouvé' });
+      return res.status(404).json({ success: false, message: 'Fournisseur non trouvÃ©' });
     }
     res.json({ success: true, data: supplier });
   } catch (error) {
     console.error('Erreur getSupplierById:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
-const createSupplier = async (req, res) => {
+const createSupplier = async (req, res, next) => {
   try {
     const { name, phone, whatsapp, address, email } = req.body;
 
@@ -51,45 +51,45 @@ const createSupplier = async (req, res) => {
       createdBy: req.user.id
     });
 
-    res.status(201).json({ success: true, data: supplier, message: 'Fournisseur créé' });
+    res.status(201).json({ success: true, data: supplier, message: 'Fournisseur crÃ©Ã©' });
   } catch (error) {
     console.error('Erreur createSupplier:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
-const updateSupplier = async (req, res) => {
+const updateSupplier = async (req, res, next) => {
   try {
     const supplier = await Supplier.findByPk(req.params.id);
     if (!supplier) {
-      return res.status(404).json({ success: false, message: 'Fournisseur non trouvé' });
+      return res.status(404).json({ success: false, message: 'Fournisseur non trouvÃ©' });
     }
 
     const { name, phone, whatsapp, address, email } = req.body;
     await supplier.update({ name, phone, whatsapp, address, email });
-    res.json({ success: true, data: supplier, message: 'Fournisseur mis à jour' });
+    res.json({ success: true, data: supplier, message: 'Fournisseur mis Ã  jour' });
   } catch (error) {
     console.error('Erreur updateSupplier:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
-const deleteSupplier = async (req, res) => {
+const deleteSupplier = async (req, res, next) => {
   try {
     const supplier = await Supplier.findByPk(req.params.id);
     if (!supplier) {
-      return res.status(404).json({ success: false, message: 'Fournisseur non trouvé' });
+      return res.status(404).json({ success: false, message: 'Fournisseur non trouvÃ©' });
     }
 
     await supplier.update({ isActive: false });
-    res.json({ success: true, message: 'Fournisseur désactivé avec succès' });
+    res.json({ success: true, message: 'Fournisseur dÃ©sactivÃ© avec succÃ¨s' });
   } catch (error) {
     console.error('Erreur deleteSupplier:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
-const recordSupplierPayment = async (req, res) => {
+const recordSupplierPayment = async (req, res, next) => {
   let transaction;
   try {
     transaction = await sequelize.transaction();
@@ -103,13 +103,13 @@ const recordSupplierPayment = async (req, res) => {
     const supplier = await Supplier.findByPk(supplierId, { transaction });
     if (!supplier) {
       await transaction.rollback();
-      return res.status(404).json({ success: false, message: 'Fournisseur non trouvé' });
+      return res.status(404).json({ success: false, message: 'Fournisseur non trouvÃ©' });
     }
 
     const payment = await SupplierPayment.create({
       supplierId,
       amount,
-      paymentMethod: paymentMethod || 'Espèces',
+      paymentMethod: paymentMethod || 'EspÃ¨ces',
       transactionReference,
       notes,
       createdBy: req.user.id
@@ -119,15 +119,15 @@ const recordSupplierPayment = async (req, res) => {
     await supplier.update({ balance: newBalance }, { transaction });
 
     await transaction.commit();
-    res.status(201).json({ success: true, data: payment, message: 'Paiement enregistré' });
+    res.status(201).json({ success: true, data: payment, message: 'Paiement enregistrÃ©' });
   } catch (error) {
     if (transaction) await transaction.rollback().catch(() => {});
     console.error('Erreur recordSupplierPayment:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
-const getSupplierPayments = async (req, res) => {
+const getSupplierPayments = async (req, res, next) => {
   try {
     const payments = await SupplierPayment.findAll({
       where: { supplierId: req.params.supplierId },
@@ -136,7 +136,7 @@ const getSupplierPayments = async (req, res) => {
     res.json({ success: true, data: payments });
   } catch (error) {
     console.error('Erreur getSupplierPayments:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
@@ -149,3 +149,4 @@ module.exports = {
   recordSupplierPayment,
   getSupplierPayments
 };
+

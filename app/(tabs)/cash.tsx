@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+﻿import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal, ActivityIndicator, Animated, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -7,6 +7,14 @@ import { api } from '../../src/api/api';
 import type { CashTransaction } from '../../src/api/api';
 import { useThemeColors } from '../../src/theme/ThemeContext';
 
+// Helper pour afficher alertes sur web et mobile
+const showAlert = (title: string, message: string = '') => {
+  if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+    window.alert(message ? (title + '\n\n' + message) : title);
+  } else {
+    showAlert(title, message || undefined);
+  }
+};
 function CashTransactionItem({ transaction, index, onDelete }: {
   transaction: CashTransaction;
   index: number;
@@ -95,7 +103,7 @@ export default function CashScreen() {
       }
     } catch (error) {
       console.error('Error loading cash data:', error);
-      Alert.alert('Erreur', 'Impossible de charger les données');
+      showAlert('Erreur', 'Impossible de charger les données');
     } finally {
       setLoading(false);
     }
@@ -141,7 +149,7 @@ export default function CashScreen() {
   const handleSubmit = async () => {
     const amount = parseFloat(formData.amount);
     if (!formData.amount || isNaN(amount) || amount <= 0) {
-      Alert.alert('Erreur', 'Veuillez entrer un montant valide');
+      showAlert('Erreur', 'Veuillez entrer un montant valide');
       return;
     }
 
@@ -151,20 +159,20 @@ export default function CashScreen() {
         amount
       });
       if (response.success) {
-        Alert.alert('Succès', 'Transaction enregistrée');
+        showAlert('Succès', 'Transaction enregistrée');
         setModalVisible(false);
         loadData();
       } else {
-        Alert.alert('Erreur', response.message || 'Impossible d\'enregistrer la transaction');
+        showAlert('Erreur', response.message || 'Impossible d\'enregistrer la transaction');
       }
     } catch (error) {
       console.error('Error creating transaction:', error);
-      Alert.alert('Erreur', 'Impossible d\'enregistrer la transaction');
+      showAlert('Erreur', 'Impossible d\'enregistrer la transaction');
     }
   };
 
   const handleDelete = (transaction: CashTransaction) => {
-    Alert.alert(
+    showAlert(
       'Confirmation',
       'Êtes-vous sûr de vouloir supprimer cette transaction ?',
       [
@@ -176,14 +184,14 @@ export default function CashScreen() {
             try {
               const response = await api.deleteCash(transaction.id!);
               if (response.success) {
-                Alert.alert('Succès', 'Transaction supprimée');
+                showAlert('Succès', 'Transaction supprimée');
                 loadData();
               } else {
-                Alert.alert('Erreur', response.message || 'Impossible de supprimer la transaction');
+                showAlert('Erreur', response.message || 'Impossible de supprimer la transaction');
               }
             } catch (error) {
               console.error('Error deleting transaction:', error);
-              Alert.alert('Erreur', 'Impossible de supprimer la transaction');
+              showAlert('Erreur', 'Impossible de supprimer la transaction');
             }
           }
         }
@@ -477,3 +485,4 @@ const styles = StyleSheet.create({
   },
   submitButtonText: { color: 'white', fontSize: 18, fontWeight: 'bold' }
 });
+

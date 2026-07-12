@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+﻿import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal, ActivityIndicator, Animated, RefreshControl } from 'react-native';
 import { Receipt, Plus, Edit, Trash2, Save, ArrowLeft, Calendar, DollarSign, Tag } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,6 +7,14 @@ import { api } from '../../src/api/api';
 import type { Expense } from '../../src/api/api';
 import { useThemeColors } from '../../src/theme/ThemeContext';
 
+// Helper pour afficher alertes sur web et mobile
+const showAlert = (title: string, message: string = '') => {
+  if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+    window.alert(message ? (title + '\n\n' + message) : title);
+  } else {
+    showAlert(title, message || undefined);
+  }
+};
 function ExpenseItem({ expense, index, onEdit, onDelete }: { expense: Expense, index: number, onEdit: (expense: Expense) => void, onDelete: (expense: Expense) => void }) {
   const itemFadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -99,7 +107,7 @@ export default function ExpensesScreen() {
       }
     } catch (error) {
       console.error('Error loading expenses:', error);
-      Alert.alert('Erreur', 'Impossible de charger les dépenses');
+      showAlert('Erreur', 'Impossible de charger les dépenses');
     } finally {
       setLoading(false);
     }
@@ -144,7 +152,7 @@ export default function ExpensesScreen() {
 
   const handleSubmit = async () => {
     if (!formData.description.trim() || !formData.amount) {
-      Alert.alert('Erreur', 'La description et le montant sont requis');
+      showAlert('Erreur', 'La description et le montant sont requis');
       return;
     }
 
@@ -166,21 +174,21 @@ export default function ExpensesScreen() {
       }
 
       if (response.success) {
-        Alert.alert('Succès', editingExpense ? 'Dépense mise à jour' : 'Dépense ajoutée');
+        showAlert('Succès', editingExpense ? 'Dépense mise à jour' : 'Dépense ajoutée');
         setModalVisible(false);
         resetForm();
         loadExpenses();
       } else {
-        Alert.alert('Erreur', response.message || 'Une erreur est survenue');
+        showAlert('Erreur', response.message || 'Une erreur est survenue');
       }
     } catch (error) {
       console.error('Error saving expense:', error);
-      Alert.alert('Erreur', 'Impossible de sauvegarder la dépense');
+      showAlert('Erreur', 'Impossible de sauvegarder la dépense');
     }
   };
 
   const handleDelete = (expense: Expense) => {
-    Alert.alert(
+    showAlert(
       'Confirmation',
       `Êtes-vous sûr de vouloir supprimer cette dépense de ${expense.amount} FCFA ?`,
       [
@@ -192,14 +200,14 @@ export default function ExpensesScreen() {
             try {
               const response = await api.deleteExpense(expense.id!);
               if (response.success) {
-                Alert.alert('Succès', 'Dépense supprimée');
+                showAlert('Succès', 'Dépense supprimée');
                 loadExpenses();
               } else {
-                Alert.alert('Erreur', response.message || 'Une erreur est survenue');
+                showAlert('Erreur', response.message || 'Une erreur est survenue');
               }
             } catch (error) {
               console.error('Error deleting expense:', error);
-              Alert.alert('Erreur', 'Impossible de supprimer la dépense');
+              showAlert('Erreur', 'Impossible de supprimer la dépense');
             }
           }
         }
@@ -492,3 +500,4 @@ const styles = StyleSheet.create({
   },
   submitButtonText: { color: 'white', fontSize: 18, fontWeight: 'bold' }
 });
+

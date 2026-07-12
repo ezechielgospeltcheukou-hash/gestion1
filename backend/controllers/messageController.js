@@ -1,7 +1,7 @@
-const Message = require('../models/Message');
+﻿const Message = require('../models/Message');
 const User = require('../models/User');
 
-const getMessages = async (req, res) => {
+const getMessages = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
@@ -26,11 +26,11 @@ const getMessages = async (req, res) => {
     res.json({ success: true, data: messagesWithNames, pagination: { page, limit, total: count, totalPages: Math.ceil(count / limit) } });
   } catch (error) {
     console.error('Erreur getMessages:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
-const createMessage = async (req, res) => {
+const createMessage = async (req, res, next) => {
   try {
     const { toUserId, content } = req.body;
     if (!toUserId || !content) {
@@ -41,24 +41,24 @@ const createMessage = async (req, res) => {
       toUserId,
       content
     });
-    res.status(201).json({ success: true, data: message, message: 'Message envoyé' });
+    res.status(201).json({ success: true, data: message, message: 'Message envoyÃ©' });
   } catch (error) {
     console.error('Erreur createMessage:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
-const deleteMessage = async (req, res) => {
+const deleteMessage = async (req, res, next) => {
   try {
     const message = await Message.findByPk(req.params.id);
     if (!message) {
-      return res.status(404).json({ success: false, message: 'Message non trouvé' });
+      return res.status(404).json({ success: false, message: 'Message non trouvÃ©' });
     }
     await message.destroy();
-    res.json({ success: true, message: 'Message supprimé' });
+    res.json({ success: true, message: 'Message supprimÃ©' });
   } catch (error) {
     console.error('Erreur deleteMessage:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
@@ -67,3 +67,4 @@ module.exports = {
   createMessage,
   deleteMessage
 };
+

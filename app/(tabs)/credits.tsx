@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+﻿import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -7,6 +7,14 @@ import { api } from '../../src/api/api';
 import { useThemeColors } from '../../src/theme/ThemeContext';
 import type { Credit } from '../../src/api/api';
 
+// Helper pour afficher alertes sur web et mobile
+const showAlert = (title: string, message: string = '') => {
+  if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+    window.alert(message ? (title + '\n\n' + message) : title);
+  } else {
+    showAlert(title, message || undefined);
+  }
+};
 export default function CreditsScreen() {
   const router = useRouter();
   const colors = useThemeColors();
@@ -31,7 +39,7 @@ export default function CreditsScreen() {
       }
     } catch (error) {
       console.error('Error loading credits:', error);
-      Alert.alert('Erreur', 'Impossible de charger les crédits');
+      showAlert('Erreur', 'Impossible de charger les crédits');
     } finally {
       setLoading(false);
     }
@@ -46,7 +54,7 @@ export default function CreditsScreen() {
   const handleSubmit = async () => {
     const amount = parseFloat(formData.amount);
     if (!formData.personName.trim() || !formData.amount || isNaN(amount)) {
-      Alert.alert('Erreur', 'Veuillez renseigner le nom et le montant');
+      showAlert('Erreur', 'Veuillez renseigner le nom et le montant');
       return;
     }
 
@@ -66,16 +74,16 @@ export default function CreditsScreen() {
       }
 
       if (response.success) {
-        Alert.alert('Succès', editingCredit ? 'Crédit mis à jour' : 'Crédit créé');
+        showAlert('Succès', editingCredit ? 'Crédit mis à jour' : 'Crédit créé');
         setModalVisible(false);
         resetForm();
         loadCredits();
       } else {
-        Alert.alert('Erreur', response.message || 'Une erreur est survenue');
+        showAlert('Erreur', response.message || 'Une erreur est survenue');
       }
     } catch (error) {
       console.error('Error saving credit:', error);
-      Alert.alert('Erreur', 'Impossible de sauvegarder le crédit');
+      showAlert('Erreur', 'Impossible de sauvegarder le crédit');
     }
   };
 
@@ -86,17 +94,17 @@ export default function CreditsScreen() {
         repaidAt: !credit.isRepaid ? new Date().toISOString() : undefined
       });
       if (response.success) {
-        Alert.alert('Succès', credit.isRepaid ? 'Crédit marqué comme non remboursé' : 'Crédit marqué comme remboursé');
+        showAlert('Succès', credit.isRepaid ? 'Crédit marqué comme non remboursé' : 'Crédit marqué comme remboursé');
         loadCredits();
       }
     } catch (error) {
       console.error('Error toggling credit:', error);
-      Alert.alert('Erreur', 'Impossible de modifier le statut du crédit');
+      showAlert('Erreur', 'Impossible de modifier le statut du crédit');
     }
   };
 
   const handleDelete = (credit: Credit) => {
-    Alert.alert(
+    showAlert(
       'Confirmation',
       'Êtes-vous sûr de vouloir supprimer ce crédit ?',
       [
@@ -108,14 +116,14 @@ export default function CreditsScreen() {
             try {
               const response = await api.deleteCredit(credit.id!);
               if (response.success) {
-                Alert.alert('Succès', 'Crédit supprimé');
+                showAlert('Succès', 'Crédit supprimé');
                 loadCredits();
               } else {
-                Alert.alert('Erreur', response.message || 'Impossible de supprimer le crédit');
+                showAlert('Erreur', response.message || 'Impossible de supprimer le crédit');
               }
             } catch (error) {
               console.error('Error deleting credit:', error);
-              Alert.alert('Erreur', 'Impossible de supprimer le crédit');
+              showAlert('Erreur', 'Impossible de supprimer le crédit');
             }
           }
         }
@@ -401,3 +409,4 @@ const styles = StyleSheet.create({
   },
   submitButtonText: { color: 'white', fontSize: 18, fontWeight: 'bold' }
 });
+

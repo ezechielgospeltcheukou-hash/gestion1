@@ -1,8 +1,16 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+﻿import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, StatusBar, ActivityIndicator, Alert, Animated, RefreshControl, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { 
-  ShoppingCart, 
+
+// Helper pour afficher alertes sur web et mobile
+const showAlert = (title: string, message: string = '') => {
+  if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+    window.alert(message ? (title + '\n\n' + message) : title);
+  } else {
+    showAlert(title, message || undefined);
+  }
+};  ShoppingCart, 
   Receipt, 
   Package, 
   PieChart, 
@@ -30,6 +38,14 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { api } from '../../src/api/api';
 import { useThemeColors } from '../../src/theme/ThemeContext';
 
+// Helper pour afficher alertes sur web et mobile
+const showAlert = (title: string, message: string = '') => {
+  if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+    window.alert(message ? (title + '\n\n' + message) : title);
+  } else {
+    showAlert(title, message || undefined);
+  }
+};
 interface MenuItem {
   id: string;
   title: string;
@@ -104,7 +120,7 @@ export default function Dashboard() {
       return;
     }
 
-    Alert.alert(
+    showAlert(
       'Déconnexion',
       'Êtes-vous sûr de vouloir vous déconnecter ?',
       [
@@ -418,3 +434,4 @@ const styles = StyleSheet.create({
   footer: { alignItems: 'center', marginTop: 10, padding: 20 },
   footerText: { color: '#9ca3af', fontSize: 12, marginTop: 4 }
 });
+

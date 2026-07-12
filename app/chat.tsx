@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+﻿import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -6,6 +6,14 @@ import { ArrowLeft, Send } from 'lucide-react-native';
 import { api } from '../src/api/api';
 import { useThemeColors } from '../src/theme/ThemeContext';
 
+// Helper pour afficher alertes sur web et mobile
+const showAlert = (title: string, message: string = '') => {
+  if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+    window.alert(message ? (title + '\n\n' + message) : title);
+  } else {
+    showAlert(title, message || undefined);
+  }
+};
 export default function ChatScreen() {
   const router = useRouter();
   const colors = useThemeColors();
@@ -56,11 +64,11 @@ export default function ChatScreen() {
         setMessageText('');
         loadMessages();
       } else {
-        Alert.alert('Erreur', response.message || 'Impossible d\'envoyer le message');
+        showAlert('Erreur', response.message || 'Impossible d\'envoyer le message');
       }
     } catch (error) {
       console.error('Error sending message:', error);
-      Alert.alert('Erreur', 'Impossible d\'envoyer le message');
+      showAlert('Erreur', 'Impossible d\'envoyer le message');
     } finally {
       setSending(false);
     }
@@ -190,3 +198,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   }
 });
+

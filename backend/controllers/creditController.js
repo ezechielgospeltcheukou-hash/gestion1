@@ -1,8 +1,8 @@
-const Credit = require('../models/Credit');
+﻿const Credit = require('../models/Credit');
 const Client = require('../models/Client');
 const Supplier = require('../models/Supplier');
 
-const getCredits = async (req, res) => {
+const getCredits = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
@@ -33,15 +33,15 @@ const getCredits = async (req, res) => {
     res.json({ success: true, data: creditsWithNames, pagination: { page, limit, total: count, totalPages: Math.ceil(count / limit) } });
   } catch (error) {
     console.error('Erreur getCredits:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
-const createCredit = async (req, res) => {
+const createCredit = async (req, res, next) => {
   try {
     const { personId, personType, amount, description } = req.body;
     if (!personId || !personType || !amount) {
-      return res.status(400).json({ success: false, message: 'Données requises' });
+      return res.status(400).json({ success: false, message: 'DonnÃ©es requises' });
     }
     const credit = await Credit.create({
       personId,
@@ -50,39 +50,39 @@ const createCredit = async (req, res) => {
       description,
       createdBy: req.user?.id
     });
-    res.status(201).json({ success: true, data: credit, message: 'Crédit créé' });
+    res.status(201).json({ success: true, data: credit, message: 'CrÃ©dit crÃ©Ã©' });
   } catch (error) {
     console.error('Erreur createCredit:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
-const updateCredit = async (req, res) => {
+const updateCredit = async (req, res, next) => {
   try {
     const credit = await Credit.findByPk(req.params.id);
     if (!credit) {
-      return res.status(404).json({ success: false, message: 'Crédit non trouvé' });
+      return res.status(404).json({ success: false, message: 'CrÃ©dit non trouvÃ©' });
     }
     const { isRepaid, repaidAt } = req.body;
     await credit.update({ isRepaid, repaidAt });
-    res.json({ success: true, data: credit, message: 'Crédit mis à jour' });
+    res.json({ success: true, data: credit, message: 'CrÃ©dit mis Ã  jour' });
   } catch (error) {
     console.error('Erreur updateCredit:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
-const deleteCredit = async (req, res) => {
+const deleteCredit = async (req, res, next) => {
   try {
     const credit = await Credit.findByPk(req.params.id);
     if (!credit) {
-      return res.status(404).json({ success: false, message: 'Crédit non trouvé' });
+      return res.status(404).json({ success: false, message: 'CrÃ©dit non trouvÃ©' });
     }
     await credit.destroy();
-    res.json({ success: true, message: 'Crédit supprimé' });
+    res.json({ success: true, message: 'CrÃ©dit supprimÃ©' });
   } catch (error) {
     console.error('Erreur deleteCredit:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    next(error);
   }
 };
 
@@ -92,3 +92,4 @@ module.exports = {
   updateCredit,
   deleteCredit
 };
+

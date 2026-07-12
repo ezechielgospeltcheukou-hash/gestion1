@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+﻿import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal, ActivityIndicator, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -7,6 +7,14 @@ import { api } from '../src/api/api';
 import { useThemeColors } from '../src/theme/ThemeContext';
 import type { Invoice } from '../src/api/api';
 
+// Helper pour afficher alertes sur web et mobile
+const showAlert = (title: string, message: string = '') => {
+  if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+    window.alert(message ? (title + '\n\n' + message) : title);
+  } else {
+    showAlert(title, message || undefined);
+  }
+};
 function InvoiceItem({ invoice, index, onEdit, onDelete }: {
   invoice: Invoice;
   index: number;
@@ -103,7 +111,7 @@ export default function InvoicesScreen() {
       }
     } catch (error) {
       console.error('Error loading invoices:', error);
-      Alert.alert('Erreur', 'Impossible de charger les factures');
+      showAlert('Erreur', 'Impossible de charger les factures');
     } finally {
       setLoading(false);
     }
@@ -135,7 +143,7 @@ export default function InvoicesScreen() {
   const handleSubmit = async () => {
     const totalAmount = parseFloat(formData.totalAmount);
     if (!formData.invoiceNumber.trim() || !formData.totalAmount || isNaN(totalAmount)) {
-      Alert.alert('Erreur', 'Veuillez renseigner le numéro et le montant de la facture');
+      showAlert('Erreur', 'Veuillez renseigner le numéro et le montant de la facture');
       return;
     }
 
@@ -153,21 +161,21 @@ export default function InvoicesScreen() {
       }
 
       if (response.success) {
-        Alert.alert('Succès', editingInvoice ? 'Facture mise à jour' : 'Facture créée');
+        showAlert('Succès', editingInvoice ? 'Facture mise à jour' : 'Facture créée');
         setModalVisible(false);
         resetForm();
         loadInvoices();
       } else {
-        Alert.alert('Erreur', response.message || 'Une erreur est survenue');
+        showAlert('Erreur', response.message || 'Une erreur est survenue');
       }
     } catch (error) {
       console.error('Error saving invoice:', error);
-      Alert.alert('Erreur', 'Impossible de sauvegarder la facture');
+      showAlert('Erreur', 'Impossible de sauvegarder la facture');
     }
   };
 
   const handleDelete = (invoice: Invoice) => {
-    Alert.alert(
+    showAlert(
       'Confirmation',
       'Êtes-vous sûr de vouloir supprimer cette facture ?',
       [
@@ -179,14 +187,14 @@ export default function InvoicesScreen() {
             try {
               const response = await api.deleteInvoice(invoice.id!);
               if (response.success) {
-                Alert.alert('Succès', 'Facture supprimée');
+                showAlert('Succès', 'Facture supprimée');
                 loadInvoices();
               } else {
-                Alert.alert('Erreur', response.message || 'Impossible de supprimer la facture');
+                showAlert('Erreur', response.message || 'Impossible de supprimer la facture');
               }
             } catch (error) {
               console.error('Error deleting invoice:', error);
-              Alert.alert('Erreur', 'Impossible de supprimer la facture');
+              showAlert('Erreur', 'Impossible de supprimer la facture');
             }
           }
         }
@@ -494,3 +502,4 @@ const styles = StyleSheet.create({
   },
   submitButtonText: { color: 'white', fontSize: 18, fontWeight: 'bold' }
 });
+

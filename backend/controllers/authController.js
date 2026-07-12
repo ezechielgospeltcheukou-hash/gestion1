@@ -21,6 +21,13 @@ const register = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Cet utilisateur existe déjà' });
     }
 
+    if (email) {
+      const emailExists = await User.findOne({ where: { email } });
+      if (emailExists) {
+        return res.status(400).json({ success: false, message: 'Cet email est déjà utilisé par un autre compte' });
+      }
+    }
+
     const user = await User.create({
       username,
       email,

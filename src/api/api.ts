@@ -391,7 +391,11 @@ class ApiService {
       const data = await response.json();
 
       if (data.success !== undefined) {
-        return { success: data.success, data: data.data, message: data.message };
+        let finalMessage = data.message;
+        if (data.errors && Array.isArray(data.errors) && data.errors.length > 0) {
+          finalMessage = (finalMessage ? finalMessage + ':\n' : '') + '- ' + data.errors.join('\n- ');
+        }
+        return { success: data.success, data: data.data, message: finalMessage };
       }
 
       if (response.ok) {

@@ -1,4 +1,4 @@
-﻿const Sale = require('../models/Sale');
+const Sale = require('../models/Sale');
 const Product = require('../models/Product');
 const sequelize = require('../config/database');
 
@@ -37,7 +37,7 @@ const createSale = async (req, res, next) => {
   let transaction;
   try {
     transaction = await sequelize.transaction();
-    const { productId, quantity, paymentMethod, transactionReference, notes, discount } = req.body;
+    const { productId, quantity, paymentMethod, transactionReference, notes, discount, customUnitPrice } = req.body;
 
     if (!productId || !quantity) {
       await transaction.rollback();
@@ -55,8 +55,9 @@ const createSale = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Stock insuffisant' });
     }
 
+    const unitPrice = customUnitPrice !== undefined && customUnitPrice !== null ? parseFloat(customUnitPrice) : product.price;
     const discountAmount = discount || 0;
-    const totalPrice = (product.price * quantity) * (1 - discountAmount / 100);
+    const totalPrice = (unitPrice * quantity) * (1 - discountAmount / 100);
 
     const sale = await Sale.create({
       productId,

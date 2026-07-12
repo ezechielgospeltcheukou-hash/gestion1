@@ -1,4 +1,4 @@
-﻿import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal, ActivityIndicator, Animated, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -77,7 +77,17 @@ export default function SalesScreen() {
     quantity: 1,
     paymentMethod: 'Espèces',
     discount: 0,
-    notes: ''
+    notes: '',
+    customUnitPrice: ''
+  });
+
+  const resetForm = () => setFormData({
+    productId: 0,
+    quantity: 1,
+    paymentMethod: 'Espèces',
+    discount: 0,
+    notes: '',
+    customUnitPrice: ''
   });
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -154,19 +164,23 @@ export default function SalesScreen() {
     }
 
     try {
-      // Calculate total price
       const product = products.find(p => p.id === formData.productId);
-      const totalPrice = product
-        ? product.price * formData.quantity * (1 - formData.discount / 100)
-        : 0;
+      const unitPrice = formData.customUnitPrice ? parseFloat(formData.customUnitPrice) : (product?.price || 0);
+      const totalPrice = unitPrice * formData.quantity * (1 - formData.discount / 100);
 
       const response = await api.createSale({
-        ...formData,
+        productId: formData.productId,
+        quantity: formData.quantity,
+        paymentMethod: formData.paymentMethod,
+        discount: formData.discount,
+        notes: formData.notes,
+        customUnitPrice: formData.customUnitPrice ? parseFloat(formData.customUnitPrice) : undefined,
         totalPrice
       });
       if (response.success) {
         showAlert('Succès', 'Vente enregistrée');
         setModalVisible(false);
+        resetForm();
         loadData();
       } else {
         showAlert('Erreur', response.message || 'Impossible d\'enregistrer la vente');
@@ -327,6 +341,35 @@ export default function SalesScreen() {
             </View>
 
             <View style={styles.inputGroup}>
+              <Text style={styles.label}>💰 Prix de vente (optionnel)</Text>
+              <TextInput
+                style={[styles.input, formData.customUnitPrice ? { borderColor: '#f59e0b', borderWidth: 2 } : {}]}
+                value={formData.customUnitPrice}
+                onChangeText={text => setFormData({ ...formData, customUnitPrice: text })}
+                keyboardType="numeric"
+                placeholder={
+                  formData.productId > 0
+                    ? `Prix par défaut: ${Number(products.find(p => p.id === formData.productId)?.price || 0).toLocaleString()} FCFA`
+                    : 'Laissez vide pour utiliser le prix du stock'
+                }
+              />
+              {formData.customUnitPrice && formData.productId > 0 && (() => {
+                const prod = products.find(p => p.id === formData.productId);
+                const customP = parseFloat(formData.customUnitPrice);
+                const diff = customP - (prod?.price || 0);
+                const isLoss = diff < 0;
+                return (
+                  <Text style={{ fontSize: 12, marginTop: 4, color: isLoss ? '#ef4444' : '#059669', fontWeight: '600' }}>
+                    {isLoss
+                      ? `⚠️ Vente à perte: -${Math.abs(diff).toLocaleString()} FCFA par unité`
+                      : `✅ Marge: +${diff.toLocaleString()} FCFA par unité`
+                    }
+                  </Text>
+                );
+              })()}
+            </View>
+
+            <View style={styles.inputGroup}>
               <Text style={styles.label}>Réduction (%)</Text>
               <TextInput
                 style={styles.input}
@@ -380,8 +423,17 @@ export default function SalesScreen() {
                   Produit: {getProductName(formData.productId)}
                 </Text>
                 <Text style={styles.previewText}>
+                  Prix unitaire: {Number(
+                    formData.customUnitPrice
+                      ? parseFloat(formData.customUnitPrice)
+                      : (products.find(p => p.id === formData.productId)?.price || 0)
+                  ).toLocaleString()} FCFA
+                </Text>
+                <Text style={[styles.previewText, { fontWeight: 'bold', fontSize: 16, color: '#059669' }]}>
                   Total: {Number(
-                    (products.find(p => p.id === formData.productId)?.price || 0) *
+                    (formData.customUnitPrice
+                      ? parseFloat(formData.customUnitPrice)
+                      : (products.find(p => p.id === formData.productId)?.price || 0)) *
                     formData.quantity *
                     (1 - formData.discount / 100)
                   ).toLocaleString()} FCFA

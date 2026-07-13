@@ -34,6 +34,8 @@ export interface AuthResponse {
   locality?: string;
   role: 'ADMIN' | 'EMPLOYEE';
   businessName?: string;
+  businessType?: string;
+  businessId?: number;
   employeeCode?: string;
   token: string;
   permissions?: Permissions;
@@ -54,6 +56,7 @@ export interface RegisterData {
   email?: string;
   password: string;
   businessName?: string;
+  businessType?: string;
 }
 
 export interface Client {

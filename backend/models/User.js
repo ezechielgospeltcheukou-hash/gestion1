@@ -34,6 +34,11 @@ const User = sequelize.define('User', {
     type: DataTypes.INTEGER,
     allowNull: true
   },
+  businessType: {
+    type: DataTypes.ENUM('BIBLES', 'VETEMENTS', 'CHAUSSURES', 'CUISINE', 'GENERAL'),
+    allowNull: true,
+    defaultValue: 'GENERAL'
+  },
   employeeCode: {
     type: DataTypes.STRING,
     allowNull: true,

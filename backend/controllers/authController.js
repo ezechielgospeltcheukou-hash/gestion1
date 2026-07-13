@@ -9,7 +9,7 @@ const generateToken = (id) => {
 
 const register = async (req, res, next) => {
   try {
-    const { username, email, password, businessName } = req.body;
+    const { username, email, password, businessName, businessType } = req.body;
 
     if (!username || !password) {
       return res.status(400).json({ success: false, message: 'Veuillez fournir username et mot de passe' });
@@ -32,6 +32,7 @@ const register = async (req, res, next) => {
       email: email || null,
       password,
       businessName,
+      businessType: businessType || 'GENERAL',
       role: 'ADMIN',
       permissions: {
         sales: true, inventory: true, clients: true, suppliers: true,

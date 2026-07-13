@@ -1,4 +1,4 @@
-﻿import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal, ActivityIndicator, Animated, RefreshControl } from 'react-native';
 import { Package, Plus, Edit, Trash2, Save, ArrowLeft, Search } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -6,6 +6,8 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { api } from '../../src/api/api';
 import { useThemeColors } from '../../src/theme/ThemeContext';
 import type { Product } from '../../src/api/api';
+import { getBusinessConfig } from '../../src/config/businessTypes';
+import { storage } from '../../src/utils/storage';
 
 // Helper: affiche alertes sur web et mobile
 const showAlert = (title: string, message?: string) => {
@@ -80,19 +82,32 @@ export default function InventoryScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [businessConfig, setBusinessConfig] = useState(getBusinessConfig('GENERAL'));
+  const [extraValues, setExtraValues] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     price: '',
     purchasePrice: '',
     stock: '',
-    category: 'Général',
+    category: '',
     barcode: '',
     lowStockAlert: '5',
   });
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
+
+  // Charger la config du commerce de l'utilisateur
+  useEffect(() => {
+    const loadBusinessConfig = async () => {
+      const userData = await storage.getUser();
+      if (userData?.businessType) {
+        setBusinessConfig(getBusinessConfig(userData.businessType));
+      }
+    };
+    loadBusinessConfig();
+  }, []);
 
   const filteredProducts = searchQuery.trim() === ''
     ? products
@@ -228,10 +243,11 @@ export default function InventoryScreen() {
       price: '',
       purchasePrice: '',
       stock: '',
-      category: 'Général',
+      category: businessConfig.categories[0] || 'Général',
       barcode: '',
       lowStockAlert: '5',
     });
+    setExtraValues({});
     setEditingProduct(null);
   };
 
@@ -261,7 +277,7 @@ export default function InventoryScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <ArrowLeft size={24} color="white" />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.headerText }]}>Stock</Text>
+        <Text style={[styles.headerTitle, { color: colors.headerText }]}>{businessConfig.productLabel}s en stock</Text>
         <TouchableOpacity onPress={openAddModal}>
           <Plus size={24} color="white" />
         </TouchableOpacity>
@@ -326,7 +342,7 @@ export default function InventoryScreen() {
 
           <ScrollView style={styles.modalContent}>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Nom *</Text>
+              <Text style={styles.label}>Nom du {businessConfig.productLabel} *</Text>
               <TextInput
                 style={styles.input}
                 value={formData.name}
@@ -372,7 +388,7 @@ export default function InventoryScreen() {
 
             <View style={styles.inputRow}>
               <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                <Text style={styles.label}>Stock</Text>
+                <Text style={styles.label}>{businessConfig.stockLabel} *</Text>
                 <TextInput
                   style={styles.input}
                   value={formData.stock}
@@ -395,12 +411,25 @@ export default function InventoryScreen() {
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Catégorie</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.category}
-                onChangeText={(text) => setFormData({ ...formData, category: text })}
-                placeholder="Général"
-              />
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 4 }}>
+                <View style={{ flexDirection: 'row', gap: 8, paddingVertical: 4 }}>
+                  {businessConfig.categories.map((cat) => (
+                    <TouchableOpacity
+                      key={cat}
+                      style={[
+                        styles.categoryChip,
+                        formData.category === cat && styles.categoryChipSelected
+                      ]}
+                      onPress={() => setFormData({ ...formData, category: cat })}
+                    >
+                      <Text style={[
+                        styles.categoryChipText,
+                        formData.category === cat && styles.categoryChipTextSelected
+                      ]}>{cat}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
             </View>
 
             <View style={styles.inputGroup}>
@@ -412,6 +441,48 @@ export default function InventoryScreen() {
                 placeholder="Entrez le code-barres"
               />
             </View>
+
+            {/* Champs spécifiques à l'activité */}
+            {businessConfig.extraFields.length > 0 && (
+              <View style={styles.extraFieldsContainer}>
+                <Text style={styles.extraFieldsTitle}>
+                  🎯 Informations spécifiques {businessConfig.label}
+                </Text>
+                {businessConfig.extraFields.map((field) => (
+                  <View key={field.key} style={styles.inputGroup}>
+                    <Text style={styles.label}>{field.label}{field.required ? ' *' : ''}</Text>
+                    {field.type === 'select' && field.options ? (
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 4 }}>
+                        <View style={{ flexDirection: 'row', gap: 8, paddingVertical: 4 }}>
+                          {field.options.map((opt) => (
+                            <TouchableOpacity
+                              key={opt}
+                              style={[
+                                styles.categoryChip,
+                                extraValues[field.key] === opt && styles.categoryChipSelected
+                              ]}
+                              onPress={() => setExtraValues(prev => ({ ...prev, [field.key]: opt }))}
+                            >
+                              <Text style={[
+                                styles.categoryChipText,
+                                extraValues[field.key] === opt && styles.categoryChipTextSelected
+                              ]}>{opt}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </ScrollView>
+                    ) : (
+                      <TextInput
+                        style={styles.input}
+                        value={extraValues[field.key] || ''}
+                        onChangeText={(text) => setExtraValues(prev => ({ ...prev, [field.key]: text }))}
+                        placeholder={field.placeholder}
+                      />
+                    )}
+                  </View>
+                ))}
+              </View>
+            )}
 
             <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} activeOpacity={0.7}>
               <Save size={20} color="white" />
@@ -535,6 +606,40 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3
   },
-  submitButtonText: { color: 'white', fontSize: 18, fontWeight: 'bold' }
+  submitButtonText: { color: 'white', fontSize: 18, fontWeight: 'bold' },
+  categoryChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#f3f4f6',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  categoryChipSelected: {
+    backgroundColor: '#059669',
+    borderColor: '#059669',
+  },
+  categoryChipText: {
+    fontSize: 13,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  categoryChipTextSelected: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  extraFieldsContainer: {
+    backgroundColor: '#f0fdf4',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+  },
+  extraFieldsTitle: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#065f46',
+    marginBottom: 16,
+  },
 });
-

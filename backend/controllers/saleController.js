@@ -60,12 +60,15 @@ const createSale = async (req, res, next) => {
     const discountAmount = discount || 0;
     const totalPrice = (unitPrice * quantity) * (1 - discountAmount / 100);
 
+    const pm = paymentMethod || 'Especes';
+    const finalPaymentMethod = pm.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
     const sale = await Sale.create({
       productId,
       quantity,
       totalPrice,
-      purchasePriceAtSale: product.purchasePrice,
-      paymentMethod: paymentMethod || 'EspÃ¨ces',
+      purchasePriceAtSale: product.purchasePrice || 0,
+      paymentMethod: finalPaymentMethod,
       transactionReference,
       soldBy: req.user.id,
       businessId: req.user.businessId,

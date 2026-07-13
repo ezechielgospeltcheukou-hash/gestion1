@@ -125,8 +125,8 @@ const startServer = async () => {
     await sequelize.authenticate();
     logger.info('Connexion a la base de donnees etablie');
 
-    await sequelize.sync({ force: true });
-    logger.info('Base de donnees reinitialisee et modeles synchronises');
+    await sequelize.sync({ alter: true });
+    logger.info('Modeles synchronises avec la base de donnees');
   } catch (error) {
     logger.error('Erreur de connexion a la base de donnees:', error.message);
     logger.warn('Le serveur va demarrer malgre tout, certaines routes peuvent echouer.');

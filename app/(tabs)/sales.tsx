@@ -39,8 +39,15 @@ function SaleItem({ sale, index, products, onDelete, getProductName }: { sale: S
     });
   };
 
+  // Calcul du bénéfice réel
+  const totalPrice = Number(sale.totalPrice || 0);
+  const purchasePriceAtSale = Number(sale.purchasePriceAtSale || 0);
+  const qty = Number(sale.quantity || 1);
+  const realProfit = totalPrice - (purchasePriceAtSale * qty);
+  const isLoss = realProfit < 0;
+
   return (
-    <Animated.View style={[styles.saleCard, { opacity: itemFadeAnim }]}>
+    <Animated.View style={[styles.saleCard, { opacity: itemFadeAnim }, isLoss && { borderLeftWidth: 4, borderLeftColor: '#ef4444' }]}>
       <View style={styles.saleInfo}>
         <View style={styles.saleHeader}>
           <Package size={20} color="#059669" />
@@ -48,6 +55,14 @@ function SaleItem({ sale, index, products, onDelete, getProductName }: { sale: S
         </View>
         <Text style={styles.saleDetail}>Quantité: {sale.quantity}</Text>
         <Text style={styles.saleDetail}>Paiement: {sale.paymentMethod}</Text>
+        {/* Bénéfice réel */}
+        {purchasePriceAtSale > 0 && (
+          <View style={[styles.saleProfitBadge, { backgroundColor: isLoss ? '#fef2f2' : '#f0fdf4' }]}>
+            <Text style={[styles.saleProfitText, { color: isLoss ? '#dc2626' : '#059669' }]}>
+              {isLoss ? '🔴 Perte' : '🟢 Bénéfice'}: {isLoss ? '−' : '+'}{Math.abs(realProfit).toLocaleString()} FCFA
+            </Text>
+          </View>
+        )}
         <Text style={styles.saleDate}>{formatDate(sale.createdAt || new Date().toISOString())}</Text>
       </View>
       <View style={styles.saleRight}>
@@ -235,9 +250,15 @@ export default function SalesScreen() {
 
   const selectedProduct = products.find(p => p.id === formData.productId);
   const customPrice = formData.customUnitPrice ? parseFloat(formData.customUnitPrice) : null;
-  const unitPrice = customPrice ?? (selectedProduct?.price || 0);
+  const unitPrice = customPrice ?? Number(selectedProduct?.price || 0);
+  const purchasePrice = Number(selectedProduct?.purchasePrice || 0);
   const totalPreview = unitPrice * formData.quantity * (1 - formData.discount / 100);
-  const priceDiff = customPrice !== null && selectedProduct ? customPrice - selectedProduct.price : null;
+
+  // Bénéfice réel = prix de vente − prix d'achat
+  const profitPerUnit = selectedProduct ? unitPrice - purchasePrice : null;
+  const totalProfit = profitPerUnit !== null ? profitPerUnit * formData.quantity * (1 - formData.discount / 100) : null;
+  const isLoss = profitPerUnit !== null && profitPerUnit < 0;
+  const isBreakEven = profitPerUnit !== null && profitPerUnit === 0;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -360,20 +381,17 @@ export default function SalesScreen() {
                     : 'Sélectionnez un produit d\'abord'
                 }
               />
-              {priceDiff !== null && (
-                <Text style={{
-                  fontSize: 13,
-                  marginTop: 6,
-                  fontWeight: '700',
-                  color: priceDiff < 0 ? '#ef4444' : '#059669'
-                }}>
-                  {priceDiff < 0
-                    ? `⚠️ Vente à perte: -${Math.abs(priceDiff).toLocaleString()} FCFA / unité`
-                    : priceDiff === 0
-                      ? '✅ Prix identique au stock'
-                      : `✅ Marge: +${priceDiff.toLocaleString()} FCFA / unité`
-                  }
-                </Text>
+              {selectedProduct && formData.customUnitPrice !== '' && profitPerUnit !== null && (
+                <View style={[styles.profitBadge, { backgroundColor: isLoss ? '#fef2f2' : isBreakEven ? '#fefce8' : '#f0fdf4', borderColor: isLoss ? '#fecaca' : isBreakEven ? '#fde68a' : '#bbf7d0' }]}>
+                  <Text style={[styles.profitBadgeText, { color: isLoss ? '#dc2626' : isBreakEven ? '#d97706' : '#059669' }]}>
+                    {isLoss
+                      ? `🔴 Vente à PERTE: −${Math.abs(profitPerUnit).toLocaleString()} FCFA/unité (achat: ${purchasePrice.toLocaleString()} FCFA)`
+                      : isBreakEven
+                        ? `🟡 Vous vendez au prix d'achat — bénéfice nul`
+                        : `🟢 Bénéfice: +${profitPerUnit.toLocaleString()} FCFA/unité (achat: ${purchasePrice.toLocaleString()} FCFA)`
+                    }
+                  </Text>
+                </View>
               )}
             </View>
 
@@ -424,27 +442,70 @@ export default function SalesScreen() {
               />
             </View>
 
-            {/* Aperçu */}
-            {formData.productId > 0 && (
-              <View style={styles.previewCard}>
+            {formData.productId > 0 && selectedProduct && (
+              <View style={[
+                styles.previewCard,
+                isLoss && { borderColor: '#fca5a5', borderWidth: 2 }
+              ]}>
                 <View style={styles.previewHeader}>
                   <Receipt size={20} color="#059669" />
                   <Text style={styles.previewTitle}>Aperçu de la vente</Text>
                 </View>
-                <Text style={styles.previewText}>Produit: {getProductName(formData.productId)}</Text>
-                <Text style={styles.previewText}>Quantité: {formData.quantity}</Text>
-                <Text style={styles.previewText}>
-                  Prix unitaire: {unitPrice.toLocaleString()} FCFA
-                  {customPrice !== null && selectedProduct && (
-                    ` (stock: ${Number(selectedProduct.price).toLocaleString()})`
-                  )}
-                </Text>
+
+                <View style={styles.previewRow}>
+                  <Text style={styles.previewLabel}>Produit</Text>
+                  <Text style={styles.previewValue}>{getProductName(formData.productId)}</Text>
+                </View>
+                <View style={styles.previewRow}>
+                  <Text style={styles.previewLabel}>Quantité</Text>
+                  <Text style={styles.previewValue}>{formData.quantity}</Text>
+                </View>
+                <View style={styles.previewRow}>
+                  <Text style={styles.previewLabel}>Prix d'achat</Text>
+                  <Text style={[styles.previewValue, { color: '#6b7280' }]}>{purchasePrice.toLocaleString()} FCFA</Text>
+                </View>
+                <View style={styles.previewRow}>
+                  <Text style={styles.previewLabel}>Prix de vente</Text>
+                  <Text style={styles.previewValue}>{unitPrice.toLocaleString()} FCFA</Text>
+                </View>
                 {formData.discount > 0 && (
-                  <Text style={styles.previewText}>Réduction: {formData.discount}%</Text>
+                  <View style={styles.previewRow}>
+                    <Text style={styles.previewLabel}>Réduction</Text>
+                    <Text style={[styles.previewValue, { color: '#f59e0b' }]}>−{formData.discount}%</Text>
+                  </View>
                 )}
-                <Text style={[styles.previewText, { fontWeight: 'bold', fontSize: 18, color: '#059669', marginTop: 8 }]}>
-                  Total: {totalPreview.toLocaleString()} FCFA
-                </Text>
+
+                <View style={[styles.previewDivider]} />
+
+                <View style={styles.previewRow}>
+                  <Text style={[styles.previewLabel, { fontWeight: 'bold' }]}>Total encaissé</Text>
+                  <Text style={[styles.previewValue, { fontWeight: 'bold', fontSize: 18, color: '#111827' }]}>
+                    {totalPreview.toLocaleString()} FCFA
+                  </Text>
+                </View>
+
+                {totalProfit !== null && (
+                  <View style={[
+                    styles.profitSummary,
+                    { backgroundColor: isLoss ? '#fef2f2' : isBreakEven ? '#fefce8' : '#f0fdf4' }
+                  ]}>
+                    <Text style={[styles.profitSummaryLabel, { color: isLoss ? '#dc2626' : isBreakEven ? '#d97706' : '#059669' }]}>
+                      {isLoss ? '🔴 Perte totale' : isBreakEven ? '🟡 Bénéfice' : '🟢 Bénéfice total'}
+                    </Text>
+                    <Text style={[styles.profitSummaryValue, { color: isLoss ? '#dc2626' : isBreakEven ? '#d97706' : '#059669' }]}>
+                      {isLoss ? '−' : '+'}{Math.abs(totalProfit).toLocaleString()} FCFA
+                    </Text>
+                  </View>
+                )}
+
+                {isLoss && (
+                  <View style={styles.lossWarning}>
+                    <Text style={styles.lossWarningText}>
+                      ⚠️ Attention: vous vendez en dessous du prix d'achat ({purchasePrice.toLocaleString()} FCFA).
+                      Vous perdez {Math.abs(profitPerUnit!).toLocaleString()} FCFA par unité.
+                    </Text>
+                  </View>
+                )}
               </View>
             )}
 
@@ -606,5 +667,18 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3
   },
-  submitButtonText: { color: 'white', fontSize: 18, fontWeight: 'bold' }
+  submitButtonText: { color: 'white', fontSize: 18, fontWeight: 'bold' },
+  profitBadge: { marginTop: 8, padding: 8, borderRadius: 8, borderWidth: 1 },
+  profitBadgeText: { fontSize: 13, fontWeight: 'bold' },
+  previewRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+  previewLabel: { fontSize: 14, color: '#6b7280' },
+  previewValue: { fontSize: 14, fontWeight: '500', color: '#111827' },
+  previewDivider: { height: 1, backgroundColor: '#e5e7eb', marginVertical: 12 },
+  profitSummary: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, padding: 12, borderRadius: 8 },
+  profitSummaryLabel: { fontSize: 15, fontWeight: 'bold' },
+  profitSummaryValue: { fontSize: 15, fontWeight: 'bold' },
+  lossWarning: { marginTop: 12, backgroundColor: '#fef2f2', padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#fca5a5' },
+  lossWarningText: { color: '#dc2626', fontSize: 13, lineHeight: 18, fontWeight: '500' },
+  saleProfitBadge: { alignSelf: 'flex-start', marginTop: 6, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
+  saleProfitText: { fontSize: 12, fontWeight: 'bold' },
 });

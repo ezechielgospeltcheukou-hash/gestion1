@@ -7,6 +7,10 @@ const Appointment = sequelize.define('Appointment', {
     primaryKey: true,
     autoIncrement: true
   },
+  businessId: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
   title: {
     type: DataTypes.STRING,
     allowNull: false
@@ -43,10 +47,10 @@ const Appointment = sequelize.define('Appointment', {
   timestamps: true,
   tableName: 'appointments',
   indexes: [
+    { fields: ['businessId'] },
     { fields: ['date'] },
     { fields: ['clientId'] },
     { fields: ['status'] },
-    { fields: ['createdBy'] },
   ]
 });
 

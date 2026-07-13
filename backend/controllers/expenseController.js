@@ -1,4 +1,4 @@
-﻿const Expense = require('../models/Expense');
+const Expense = require('../models/Expense');
 const sequelize = require('../config/database');
 
 const getExpenses = async (req, res, next) => {
@@ -8,6 +8,7 @@ const getExpenses = async (req, res, next) => {
     const offset = (page - 1) * limit;
 
     const { count, rows } = await Expense.findAndCountAll({
+      where: { businessId: req.user.businessId },
       order: [['date', 'DESC']],
       limit,
       offset
@@ -21,7 +22,7 @@ const getExpenses = async (req, res, next) => {
 
 const getExpenseById = async (req, res, next) => {
   try {
-    const expense = await Expense.findByPk(req.params.id);
+    const expense = await Expense.findOne({ where: { id: req.params.id, businessId: req.user.businessId } });
     if (!expense) {
       return res.status(404).json({ success: false, message: 'DÃ©pense non trouvÃ©e' });
     }
@@ -47,7 +48,8 @@ const createExpense = async (req, res, next) => {
       date: date || new Date(),
       paymentMethod: paymentMethod || 'EspÃ¨ces',
       notes,
-      createdBy: req.user.id
+      createdBy: req.user.id,
+      businessId: req.user.businessId
     });
 
     res.status(201).json({ success: true, data: expense, message: 'DÃ©pense enregistrÃ©e' });
@@ -59,7 +61,7 @@ const createExpense = async (req, res, next) => {
 
 const updateExpense = async (req, res, next) => {
   try {
-    const expense = await Expense.findByPk(req.params.id);
+    const expense = await Expense.findOne({ where: { id: req.params.id, businessId: req.user.businessId } });
     if (!expense) {
       return res.status(404).json({ success: false, message: 'DÃ©pense non trouvÃ©e' });
     }
@@ -75,7 +77,7 @@ const updateExpense = async (req, res, next) => {
 
 const deleteExpense = async (req, res, next) => {
   try {
-    const expense = await Expense.findByPk(req.params.id);
+    const expense = await Expense.findOne({ where: { id: req.params.id, businessId: req.user.businessId } });
     if (!expense) {
       return res.status(404).json({ success: false, message: 'DÃ©pense non trouvÃ©e' });
     }
@@ -92,7 +94,7 @@ const getExpensesStats = async (req, res, next) => {
   try {
     const { startDate, endDate, category } = req.query;
     
-    let where = {};
+    let where = { businessId: req.user.businessId };
     if (startDate && endDate) {
       where.date = {
         [sequelize.Op.between]: [new Date(startDate), new Date(endDate)]

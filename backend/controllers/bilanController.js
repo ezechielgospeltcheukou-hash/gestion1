@@ -1,4 +1,4 @@
-﻿const { Op } = require('sequelize');
+const { Op } = require('sequelize');
 const Sale = require('../models/Sale');
 const Product = require('../models/Product');
 const Expense = require('../models/Expense');
@@ -14,6 +14,8 @@ const getBilan = async (req, res, next) => {
     const today = new Date(now);
     today.setHours(0, 0, 0, 0);
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const bid = req.user.businessId;
 
     const [
       allSales,
@@ -34,27 +36,27 @@ const getBilan = async (req, res, next) => {
       monthlyExpensesData,
     ] = await Promise.all([
 
-      Sale.findAll({ raw: true }),
-      Sale.findAll({ where: { createdAt: { [Op.gte]: startOfMonth } }, raw: true }),
-      Sale.findAll({ where: { createdAt: { [Op.gte]: today } }, raw: true }),
+      Sale.findAll({ where: { businessId: bid }, raw: true }),
+      Sale.findAll({ where: { businessId: bid, createdAt: { [Op.gte]: startOfMonth } }, raw: true }),
+      Sale.findAll({ where: { businessId: bid, createdAt: { [Op.gte]: today } }, raw: true }),
 
-      Expense.findAll({ raw: true }),
-      Expense.findAll({ where: { date: { [Op.gte]: startOfMonth } }, raw: true }),
+      Expense.findAll({ where: { businessId: bid }, raw: true }),
+      Expense.findAll({ where: { businessId: bid, date: { [Op.gte]: startOfMonth } }, raw: true }),
 
-      Product.findAll({ where: { isActive: true }, raw: true }),
+      Product.findAll({ where: { businessId: bid, isActive: true }, raw: true }),
 
-      CashTransaction.findAll({ raw: true }),
+      CashTransaction.findAll({ where: { businessId: bid }, raw: true }),
 
-      Credit.findAll({ where: { personType: 'CLIENT', isRepaid: false }, raw: true }),
-      Credit.findAll({ where: { personType: 'SUPPLIER', isRepaid: false }, raw: true }),
+      Credit.findAll({ where: { businessId: bid, personType: 'CLIENT', isRepaid: false }, raw: true }),
+      Credit.findAll({ where: { businessId: bid, personType: 'SUPPLIER', isRepaid: false }, raw: true }),
 
-      Client.findAll({ where: { isActive: true }, raw: true }),
-      Supplier.findAll({ where: { isActive: true }, raw: true }),
+      Client.findAll({ where: { businessId: bid, isActive: true }, raw: true }),
+      Supplier.findAll({ where: { businessId: bid, isActive: true }, raw: true }),
 
-      Invoice.findAll({ where: { status: ['DRAFT', 'SENT'] }, raw: true }),
+      Invoice.findAll({ where: { businessId: bid, status: ['DRAFT', 'SENT'] }, raw: true }),
 
-      Client.count({ where: { isActive: true } }),
-      Supplier.count({ where: { isActive: true } }),
+      Client.count({ where: { businessId: bid, isActive: true } }),
+      Supplier.count({ where: { businessId: bid, isActive: true } }),
     ]);
 
     const totalSalesVal = allSales.reduce((s, sale) => s + parseFloat(sale.totalPrice || 0), 0);

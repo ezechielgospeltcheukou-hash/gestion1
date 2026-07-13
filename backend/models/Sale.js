@@ -7,6 +7,10 @@ const Sale = sequelize.define('Sale', {
     primaryKey: true,
     autoIncrement: true
   },
+  businessId: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
   productId: {
     type: DataTypes.INTEGER,
     allowNull: false
@@ -25,8 +29,8 @@ const Sale = sequelize.define('Sale', {
     defaultValue: 0
   },
   paymentMethod: {
-    type: DataTypes.ENUM('Espèces', 'Orange Money', 'MTN Mobile Money', 'Moov Money', 'Carte Bancaire', 'Crédit'),
-    defaultValue: 'Espèces'
+    type: DataTypes.ENUM('Especes', 'Orange Money', 'MTN Mobile Money', 'Moov Money', 'Carte Bancaire', 'Credit'),
+    defaultValue: 'Especes'
   },
   transactionReference: {
     type: DataTypes.STRING,
@@ -49,9 +53,9 @@ const Sale = sequelize.define('Sale', {
   timestamps: true,
   tableName: 'sales',
   indexes: [
+    { fields: ['businessId'] },
     { fields: ['productId'] },
     { fields: ['createdAt'] },
-    { fields: ['paymentMethod'] },
     { fields: ['soldBy'] },
   ]
 });

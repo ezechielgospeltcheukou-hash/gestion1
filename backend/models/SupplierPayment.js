@@ -7,6 +7,10 @@ const SupplierPayment = sequelize.define('SupplierPayment', {
     primaryKey: true,
     autoIncrement: true
   },
+  businessId: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
   supplierId: {
     type: DataTypes.INTEGER,
     allowNull: false
@@ -39,8 +43,8 @@ const SupplierPayment = sequelize.define('SupplierPayment', {
   timestamps: true,
   tableName: 'supplier_payments',
   indexes: [
+    { fields: ['businessId'] },
     { fields: ['supplierId'] },
-    { fields: ['createdAt'] },
   ]
 });
 

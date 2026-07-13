@@ -1,4 +1,4 @@
-﻿const Message = require('../models/Message');
+const Message = require('../models/Message');
 const User = require('../models/User');
 
 const getMessages = async (req, res, next) => {
@@ -8,6 +8,7 @@ const getMessages = async (req, res, next) => {
     const offset = (page - 1) * limit;
 
     const { count, rows: messages } = await Message.findAndCountAll({
+      where: { businessId: req.user.businessId },
       order: [['createdAt', 'DESC']],
       limit,
       offset
@@ -39,7 +40,8 @@ const createMessage = async (req, res, next) => {
     const message = await Message.create({
       fromUserId: req.user?.id,
       toUserId,
-      content
+      content,
+      businessId: req.user.businessId
     });
     res.status(201).json({ success: true, data: message, message: 'Message envoyÃ©' });
   } catch (error) {
@@ -50,7 +52,7 @@ const createMessage = async (req, res, next) => {
 
 const deleteMessage = async (req, res, next) => {
   try {
-    const message = await Message.findByPk(req.params.id);
+    const message = await Message.findOne({ where: { id: req.params.id, businessId: req.user.businessId } });
     if (!message) {
       return res.status(404).json({ success: false, message: 'Message non trouvÃ©' });
     }

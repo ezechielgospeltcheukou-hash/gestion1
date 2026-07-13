@@ -1,4 +1,4 @@
-﻿const Credit = require('../models/Credit');
+const Credit = require('../models/Credit');
 const Client = require('../models/Client');
 const Supplier = require('../models/Supplier');
 
@@ -9,6 +9,7 @@ const getCredits = async (req, res, next) => {
     const offset = (page - 1) * limit;
 
     const { count, rows: credits } = await Credit.findAndCountAll({
+      where: { businessId: req.user.businessId },
       order: [['createdAt', 'DESC']],
       limit,
       offset
@@ -48,7 +49,8 @@ const createCredit = async (req, res, next) => {
       personType,
       amount,
       description,
-      createdBy: req.user?.id
+      createdBy: req.user?.id,
+      businessId: req.user.businessId
     });
     res.status(201).json({ success: true, data: credit, message: 'CrÃ©dit crÃ©Ã©' });
   } catch (error) {
@@ -59,7 +61,7 @@ const createCredit = async (req, res, next) => {
 
 const updateCredit = async (req, res, next) => {
   try {
-    const credit = await Credit.findByPk(req.params.id);
+    const credit = await Credit.findOne({ where: { id: req.params.id, businessId: req.user.businessId } });
     if (!credit) {
       return res.status(404).json({ success: false, message: 'CrÃ©dit non trouvÃ©' });
     }
@@ -74,7 +76,7 @@ const updateCredit = async (req, res, next) => {
 
 const deleteCredit = async (req, res, next) => {
   try {
-    const credit = await Credit.findByPk(req.params.id);
+    const credit = await Credit.findOne({ where: { id: req.params.id, businessId: req.user.businessId } });
     if (!credit) {
       return res.status(404).json({ success: false, message: 'CrÃ©dit non trouvÃ©' });
     }

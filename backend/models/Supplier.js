@@ -7,6 +7,10 @@ const Supplier = sequelize.define('Supplier', {
     primaryKey: true,
     autoIncrement: true
   },
+  businessId: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
   name: {
     type: DataTypes.STRING,
     allowNull: false
@@ -25,10 +29,7 @@ const Supplier = sequelize.define('Supplier', {
   },
   email: {
     type: DataTypes.STRING,
-    allowNull: true,
-    validate: {
-      isEmail: true
-    }
+    allowNull: true
   },
   balance: {
     type: DataTypes.DECIMAL(15, 2),
@@ -46,9 +47,9 @@ const Supplier = sequelize.define('Supplier', {
   timestamps: true,
   tableName: 'suppliers',
   indexes: [
+    { fields: ['businessId'] },
     { fields: ['name'] },
     { fields: ['isActive'] },
-    { fields: ['createdBy'] },
   ]
 });
 

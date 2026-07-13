@@ -7,6 +7,10 @@ const ActivityLog = sequelize.define('ActivityLog', {
     primaryKey: true,
     autoIncrement: true
   },
+  businessId: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
   action: {
     type: DataTypes.STRING,
     allowNull: false
@@ -35,6 +39,7 @@ const ActivityLog = sequelize.define('ActivityLog', {
   timestamps: true,
   tableName: 'activity_logs',
   indexes: [
+    { fields: ['businessId'] },
     { fields: ['userId'] },
     { fields: ['action'] },
     { fields: ['createdAt'] },

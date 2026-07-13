@@ -7,6 +7,7 @@ const getEmployees = async (req, res, next) => {
     const offset = (page - 1) * limit;
 
     const { count, rows } = await User.findAndCountAll({
+      where: { businessId: req.user.businessId },
       attributes: { exclude: ['password'] },
       limit,
       offset
@@ -53,7 +54,8 @@ const createEmployee = async (req, res, next) => {
             expenses: true, invoices: true, cash: true, reports: true,
             appointments: true, credits: true, messages: true, employees: true
           }
-        : permissions
+        : permissions,
+      businessId: req.user.businessId
     });
 
     const employeeWithoutPassword = { ...employee.get() };
@@ -76,7 +78,7 @@ const updateEmployee = async (req, res, next) => {
     const { id } = req.params;
     const { username, email, phone, address, salary, locality, isActive, role, permissions } = req.body;
 
-    const employee = await User.findByPk(id);
+    const employee = await User.findOne({ where: { id, businessId: req.user.businessId } });
 
     if (!employee) {
       return res.status(404).json({ success: false, message: 'Utilisateur non trouve' });
@@ -114,7 +116,7 @@ const deleteEmployee = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const employee = await User.findByPk(id);
+    const employee = await User.findOne({ where: { id, businessId: req.user.businessId } });
 
     if (!employee) {
       return res.status(404).json({ success: false, message: 'Utilisateur non trouve' });
@@ -132,7 +134,7 @@ const resetEmployeeCode = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const employee = await User.findByPk(id);
+    const employee = await User.findOne({ where: { id, businessId: req.user.businessId } });
 
     if (!employee) {
       return res.status(404).json({ success: false, message: 'Utilisateur non trouve' });

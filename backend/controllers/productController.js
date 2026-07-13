@@ -1,4 +1,4 @@
-﻿const Product = require('../models/Product');
+const Product = require('../models/Product');
 
 const getProducts = async (req, res, next) => {
   try {
@@ -7,7 +7,7 @@ const getProducts = async (req, res, next) => {
     const offset = (page - 1) * limit;
 
     const { count, rows } = await Product.findAndCountAll({
-      where: { isActive: true },
+      where: { isActive: true, businessId: req.user.businessId },
       order: [['name', 'ASC']],
       limit,
       offset
@@ -21,7 +21,7 @@ const getProducts = async (req, res, next) => {
 
 const getProductById = async (req, res, next) => {
   try {
-    const product = await Product.findByPk(req.params.id);
+    const product = await Product.findOne({ where: { id: req.params.id, businessId: req.user.businessId } });
     if (!product) {
       return res.status(404).json({ success: false, message: 'Produit non trouvÃ©' });
     }
@@ -50,7 +50,8 @@ const createProduct = async (req, res, next) => {
       barcode,
       expirationDate,
       lowStockAlert: lowStockAlert || 5,
-      createdBy: req.user.id
+      createdBy: req.user.id,
+      businessId: req.user.businessId
     });
 
     res.status(201).json({ success: true, data: product, message: 'Produit crÃ©Ã©' });
@@ -65,7 +66,7 @@ const createProduct = async (req, res, next) => {
 
 const updateProduct = async (req, res, next) => {
   try {
-    const product = await Product.findByPk(req.params.id);
+    const product = await Product.findOne({ where: { id: req.params.id, businessId: req.user.businessId } });
     if (!product) {
       return res.status(404).json({ success: false, message: 'Produit non trouvÃ©' });
     }
@@ -81,7 +82,7 @@ const updateProduct = async (req, res, next) => {
 
 const deleteProduct = async (req, res, next) => {
   try {
-    const product = await Product.findByPk(req.params.id);
+    const product = await Product.findOne({ where: { id: req.params.id, businessId: req.user.businessId } });
     if (!product) {
       return res.status(404).json({ success: false, message: 'Produit non trouvÃ©' });
     }
@@ -97,7 +98,7 @@ const deleteProduct = async (req, res, next) => {
 const adjustStock = async (req, res, next) => {
   try {
     const { quantity } = req.body;
-    const product = await Product.findByPk(req.params.id);
+    const product = await Product.findOne({ where: { id: req.params.id, businessId: req.user.businessId } });
 
     if (!product) {
       return res.status(404).json({ success: false, message: 'Produit non trouvÃ©' });

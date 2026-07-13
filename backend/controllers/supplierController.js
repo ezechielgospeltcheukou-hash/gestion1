@@ -1,4 +1,4 @@
-﻿const Supplier = require('../models/Supplier');
+const Supplier = require('../models/Supplier');
 const SupplierPayment = require('../models/SupplierPayment');
 const sequelize = require('../config/database');
 
@@ -9,7 +9,7 @@ const getSuppliers = async (req, res, next) => {
     const offset = (page - 1) * limit;
 
     const { count, rows } = await Supplier.findAndCountAll({
-      where: { isActive: true },
+      where: { isActive: true, businessId: req.user.businessId },
       order: [['name', 'ASC']],
       limit,
       offset
@@ -23,7 +23,7 @@ const getSuppliers = async (req, res, next) => {
 
 const getSupplierById = async (req, res, next) => {
   try {
-    const supplier = await Supplier.findByPk(req.params.id);
+    const supplier = await Supplier.findOne({ where: { id: req.params.id, businessId: req.user.businessId } });
     if (!supplier) {
       return res.status(404).json({ success: false, message: 'Fournisseur non trouvÃ©' });
     }
@@ -48,7 +48,8 @@ const createSupplier = async (req, res, next) => {
       whatsapp,
       address,
       email,
-      createdBy: req.user.id
+      createdBy: req.user.id,
+      businessId: req.user.businessId
     });
 
     res.status(201).json({ success: true, data: supplier, message: 'Fournisseur crÃ©Ã©' });
@@ -60,7 +61,7 @@ const createSupplier = async (req, res, next) => {
 
 const updateSupplier = async (req, res, next) => {
   try {
-    const supplier = await Supplier.findByPk(req.params.id);
+    const supplier = await Supplier.findOne({ where: { id: req.params.id, businessId: req.user.businessId } });
     if (!supplier) {
       return res.status(404).json({ success: false, message: 'Fournisseur non trouvÃ©' });
     }
@@ -76,7 +77,7 @@ const updateSupplier = async (req, res, next) => {
 
 const deleteSupplier = async (req, res, next) => {
   try {
-    const supplier = await Supplier.findByPk(req.params.id);
+    const supplier = await Supplier.findOne({ where: { id: req.params.id, businessId: req.user.businessId } });
     if (!supplier) {
       return res.status(404).json({ success: false, message: 'Fournisseur non trouvÃ©' });
     }
@@ -100,7 +101,7 @@ const recordSupplierPayment = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Veuillez fournir fournisseur et montant' });
     }
 
-    const supplier = await Supplier.findByPk(supplierId, { transaction });
+    const supplier = await Supplier.findOne({ where: { id: supplierId, businessId: req.user.businessId }, transaction });
     if (!supplier) {
       await transaction.rollback();
       return res.status(404).json({ success: false, message: 'Fournisseur non trouvÃ©' });
@@ -112,7 +113,8 @@ const recordSupplierPayment = async (req, res, next) => {
       paymentMethod: paymentMethod || 'EspÃ¨ces',
       transactionReference,
       notes,
-      createdBy: req.user.id
+      createdBy: req.user.id,
+      businessId: req.user.businessId
     }, { transaction });
 
     const newBalance = parseFloat(supplier.balance) - parseFloat(amount);
@@ -130,7 +132,7 @@ const recordSupplierPayment = async (req, res, next) => {
 const getSupplierPayments = async (req, res, next) => {
   try {
     const payments = await SupplierPayment.findAll({
-      where: { supplierId: req.params.supplierId },
+      where: { supplierId: req.params.supplierId, businessId: req.user.businessId },
       order: [['createdAt', 'DESC']]
     });
     res.json({ success: true, data: payments });

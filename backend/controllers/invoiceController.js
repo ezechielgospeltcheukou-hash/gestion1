@@ -1,4 +1,4 @@
-﻿const Invoice = require('../models/Invoice');
+const Invoice = require('../models/Invoice');
 
 const getInvoices = async (req, res, next) => {
   try {
@@ -7,6 +7,7 @@ const getInvoices = async (req, res, next) => {
     const offset = (page - 1) * limit;
 
     const { count, rows } = await Invoice.findAndCountAll({
+      where: { businessId: req.user.businessId },
       order: [['createdAt', 'DESC']],
       limit,
       offset
@@ -33,7 +34,8 @@ const createInvoice = async (req, res, next) => {
       items: typeof items === 'object' ? JSON.stringify(items) : items,
       notes,
       dueDate,
-      createdBy: req.user?.id
+      createdBy: req.user?.id,
+      businessId: req.user.businessId
     });
     res.status(201).json({ success: true, data: invoice, message: 'Facture crÃ©Ã©e' });
   } catch (error) {
@@ -44,7 +46,7 @@ const createInvoice = async (req, res, next) => {
 
 const updateInvoice = async (req, res, next) => {
   try {
-    const invoice = await Invoice.findByPk(req.params.id);
+    const invoice = await Invoice.findOne({ where: { id: req.params.id, businessId: req.user.businessId } });
     if (!invoice) {
       return res.status(404).json({ success: false, message: 'Facture non trouvÃ©e' });
     }
@@ -63,7 +65,7 @@ const updateInvoice = async (req, res, next) => {
 
 const deleteInvoice = async (req, res, next) => {
   try {
-    const invoice = await Invoice.findByPk(req.params.id);
+    const invoice = await Invoice.findOne({ where: { id: req.params.id, businessId: req.user.businessId } });
     if (!invoice) {
       return res.status(404).json({ success: false, message: 'Facture non trouvÃ©e' });
     }

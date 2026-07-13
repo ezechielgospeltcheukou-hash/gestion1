@@ -7,6 +7,10 @@ const CashTransaction = sequelize.define('CashTransaction', {
     primaryKey: true,
     autoIncrement: true
   },
+  businessId: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
   amount: {
     type: DataTypes.DECIMAL(15, 2),
     allowNull: false
@@ -35,9 +39,8 @@ const CashTransaction = sequelize.define('CashTransaction', {
   timestamps: true,
   tableName: 'cash_transactions',
   indexes: [
+    { fields: ['businessId'] },
     { fields: ['type'] },
-    { fields: ['createdAt'] },
-    { fields: ['createdBy'] },
   ]
 });
 

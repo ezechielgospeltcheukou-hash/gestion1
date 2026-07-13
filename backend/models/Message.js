@@ -7,6 +7,10 @@ const Message = sequelize.define('Message', {
     primaryKey: true,
     autoIncrement: true
   },
+  businessId: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
   fromUserId: {
     type: DataTypes.INTEGER,
     allowNull: false
@@ -27,9 +31,9 @@ const Message = sequelize.define('Message', {
   timestamps: true,
   tableName: 'messages',
   indexes: [
+    { fields: ['businessId'] },
     { fields: ['fromUserId'] },
     { fields: ['toUserId'] },
-    { fields: ['createdAt'] },
   ]
 });
 

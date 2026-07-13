@@ -1,4 +1,4 @@
-﻿const Client = require('../models/Client');
+const Client = require('../models/Client');
 
 const getClients = async (req, res, next) => {
   try {
@@ -7,7 +7,7 @@ const getClients = async (req, res, next) => {
     const offset = (page - 1) * limit;
 
     const { count, rows } = await Client.findAndCountAll({
-      where: { isActive: true },
+      where: { isActive: true, businessId: req.user.businessId },
       order: [['createdAt', 'DESC']],
       limit,
       offset
@@ -21,7 +21,7 @@ const getClients = async (req, res, next) => {
 
 const getClientById = async (req, res, next) => {
   try {
-    const client = await Client.findByPk(req.params.id);
+    const client = await Client.findOne({ where: { id: req.params.id, businessId: req.user.businessId } });
     if (!client) {
       return res.status(404).json({ success: false, message: 'Client non trouvÃ©' });
     }
@@ -42,7 +42,8 @@ const createClient = async (req, res, next) => {
       address,
       email,
       notes,
-      createdBy: req.user.id
+      createdBy: req.user.id,
+      businessId: req.user.businessId
     });
     res.status(201).json({ success: true, data: client, message: 'Client crÃ©Ã©' });
   } catch (error) {
@@ -53,7 +54,7 @@ const createClient = async (req, res, next) => {
 
 const updateClient = async (req, res, next) => {
   try {
-    const client = await Client.findByPk(req.params.id);
+    const client = await Client.findOne({ where: { id: req.params.id, businessId: req.user.businessId } });
     if (!client) {
       return res.status(404).json({ success: false, message: 'Client non trouvÃ©' });
     }
@@ -68,7 +69,7 @@ const updateClient = async (req, res, next) => {
 
 const deleteClient = async (req, res, next) => {
   try {
-    const client = await Client.findByPk(req.params.id);
+    const client = await Client.findOne({ where: { id: req.params.id, businessId: req.user.businessId } });
     if (!client) {
       return res.status(404).json({ success: false, message: 'Client non trouvÃ©' });
     }

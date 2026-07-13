@@ -9,6 +9,7 @@ const getSales = async (req, res, next) => {
     const offset = (page - 1) * limit;
 
     const { count, rows } = await Sale.findAndCountAll({
+      where: { businessId: req.user.businessId },
       order: [['createdAt', 'DESC']],
       limit,
       offset
@@ -22,7 +23,7 @@ const getSales = async (req, res, next) => {
 
 const getSaleById = async (req, res, next) => {
   try {
-    const sale = await Sale.findByPk(req.params.id);
+    const sale = await Sale.findOne({ where: { id: req.params.id, businessId: req.user.businessId } });
     if (!sale) {
       return res.status(404).json({ success: false, message: 'Vente non trouvÃ©e' });
     }
@@ -44,7 +45,7 @@ const createSale = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Veuillez fournir produit et quantitÃ©' });
     }
 
-    const product = await Product.findByPk(productId, { transaction });
+    const product = await Product.findOne({ where: { id: productId, businessId: req.user.businessId }, transaction });
     if (!product) {
       await transaction.rollback();
       return res.status(404).json({ success: false, message: 'Produit non trouvÃ©' });
@@ -67,6 +68,7 @@ const createSale = async (req, res, next) => {
       paymentMethod: paymentMethod || 'EspÃ¨ces',
       transactionReference,
       soldBy: req.user.id,
+      businessId: req.user.businessId,
       discount: discountAmount,
       notes
     }, { transaction });
@@ -90,13 +92,13 @@ const deleteSale = async (req, res, next) => {
   try {
     transaction = await sequelize.transaction();
 
-    const sale = await Sale.findByPk(req.params.id, { transaction });
+    const sale = await Sale.findOne({ where: { id: req.params.id, businessId: req.user.businessId }, transaction });
     if (!sale) {
       await transaction.rollback();
       return res.status(404).json({ success: false, message: 'Vente non trouvÃ©e' });
     }
 
-    const product = await Product.findByPk(sale.productId, { transaction });
+    const product = await Product.findOne({ where: { id: sale.productId, businessId: req.user.businessId }, transaction });
     if (product) {
       await product.update(
         { stock: product.stock + sale.quantity },
@@ -118,7 +120,7 @@ const getSalesStats = async (req, res, next) => {
   try {
     const { startDate, endDate } = req.query;
     
-    let where = {};
+    let where = { businessId: req.user.businessId };
     if (startDate && endDate) {
       where = {
         createdAt: {

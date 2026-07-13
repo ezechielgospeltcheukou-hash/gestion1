@@ -30,6 +30,10 @@ const User = sequelize.define('User', {
     defaultValue: 'EMPLOYEE',
     allowNull: false
   },
+  businessId: {
+    type: DataTypes.INTEGER,
+    allowNull: true
+  },
   employeeCode: {
     type: DataTypes.STRING,
     allowNull: true,
@@ -92,6 +96,7 @@ const User = sequelize.define('User', {
     { fields: ['username'] },
     { fields: ['role'] },
     { fields: ['isActive'] },
+    { fields: ['businessId'] },
     { fields: ['employeeCode'], unique: true },
   ]
 });
@@ -104,7 +109,7 @@ User.beforeCreate(async (user) => {
   if (user.role === 'EMPLOYEE' && !user.employeeCode) {
     const lastUser = await User.findOne({
       order: [['id', 'DESC']],
-      where: { role: 'EMPLOYEE' }
+      where: { role: 'EMPLOYEE', businessId: user.businessId }
     });
     const nextNum = lastUser && lastUser.employeeCode
       ? parseInt(lastUser.employeeCode.replace('EMP-', '')) + 1

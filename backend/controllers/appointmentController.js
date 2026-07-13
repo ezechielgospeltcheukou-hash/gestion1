@@ -1,4 +1,4 @@
-﻿const Appointment = require('../models/Appointment');
+const Appointment = require('../models/Appointment');
 
 const getAppointments = async (req, res, next) => {
   try {
@@ -7,6 +7,7 @@ const getAppointments = async (req, res, next) => {
     const offset = (page - 1) * limit;
 
     const { count, rows } = await Appointment.findAndCountAll({
+      where: { businessId: req.user.businessId },
       order: [['date', 'ASC']],
       limit,
       offset
@@ -32,7 +33,8 @@ const createAppointment = async (req, res, next) => {
       clientId,
       clientName,
       status,
-      createdBy: req.user?.id
+      createdBy: req.user?.id,
+      businessId: req.user.businessId
     });
     res.status(201).json({ success: true, data: appointment, message: 'Rendez-vous crÃ©Ã©' });
   } catch (error) {
@@ -43,7 +45,7 @@ const createAppointment = async (req, res, next) => {
 
 const updateAppointment = async (req, res, next) => {
   try {
-    const appointment = await Appointment.findByPk(req.params.id);
+    const appointment = await Appointment.findOne({ where: { id: req.params.id, businessId: req.user.businessId } });
     if (!appointment) {
       return res.status(404).json({ success: false, message: 'Rendez-vous non trouvÃ©' });
     }
@@ -58,7 +60,7 @@ const updateAppointment = async (req, res, next) => {
 
 const deleteAppointment = async (req, res, next) => {
   try {
-    const appointment = await Appointment.findByPk(req.params.id);
+    const appointment = await Appointment.findOne({ where: { id: req.params.id, businessId: req.user.businessId } });
     if (!appointment) {
       return res.status(404).json({ success: false, message: 'Rendez-vous non trouvÃ©' });
     }

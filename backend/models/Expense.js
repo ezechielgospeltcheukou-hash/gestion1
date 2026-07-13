@@ -7,6 +7,10 @@ const Expense = sequelize.define('Expense', {
     primaryKey: true,
     autoIncrement: true
   },
+  businessId: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
   description: {
     type: DataTypes.TEXT,
     allowNull: false
@@ -17,7 +21,7 @@ const Expense = sequelize.define('Expense', {
   },
   category: {
     type: DataTypes.STRING,
-    defaultValue: 'Général'
+    defaultValue: 'General'
   },
   date: {
     type: DataTypes.DATE,
@@ -28,8 +32,8 @@ const Expense = sequelize.define('Expense', {
     allowNull: true
   },
   paymentMethod: {
-    type: DataTypes.ENUM('Espèces', 'Orange Money', 'MTN Mobile Money', 'Moov Money', 'Carte Bancaire'),
-    defaultValue: 'Espèces'
+    type: DataTypes.STRING,
+    defaultValue: 'Especes'
   },
   notes: {
     type: DataTypes.TEXT,
@@ -43,10 +47,9 @@ const Expense = sequelize.define('Expense', {
   timestamps: true,
   tableName: 'expenses',
   indexes: [
+    { fields: ['businessId'] },
     { fields: ['category'] },
     { fields: ['date'] },
-    { fields: ['createdBy'] },
-    { fields: ['createdAt'] },
   ]
 });
 

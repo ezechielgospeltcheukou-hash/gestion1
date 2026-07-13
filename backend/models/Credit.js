@@ -7,6 +7,10 @@ const Credit = sequelize.define('Credit', {
     primaryKey: true,
     autoIncrement: true
   },
+  businessId: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
   personId: {
     type: DataTypes.INTEGER,
     allowNull: false
@@ -39,10 +43,10 @@ const Credit = sequelize.define('Credit', {
   timestamps: true,
   tableName: 'credits',
   indexes: [
+    { fields: ['businessId'] },
     { fields: ['personId'] },
     { fields: ['personType'] },
     { fields: ['isRepaid'] },
-    { fields: ['createdAt'] },
   ]
 });
 

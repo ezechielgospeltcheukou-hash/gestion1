@@ -7,6 +7,10 @@ const Product = sequelize.define('Product', {
     primaryKey: true,
     autoIncrement: true
   },
+  businessId: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
   name: {
     type: DataTypes.STRING,
     allowNull: false
@@ -32,12 +36,11 @@ const Product = sequelize.define('Product', {
   category: {
     type: DataTypes.STRING,
     allowNull: true,
-    defaultValue: 'Général'
+    defaultValue: 'General'
   },
   barcode: {
     type: DataTypes.STRING,
-    allowNull: true,
-    unique: true
+    allowNull: true
   },
   qrCode: {
     type: DataTypes.TEXT,
@@ -67,11 +70,11 @@ const Product = sequelize.define('Product', {
   timestamps: true,
   tableName: 'products',
   indexes: [
+    { fields: ['businessId'] },
     { fields: ['name'] },
     { fields: ['category'] },
     { fields: ['stock'] },
     { fields: ['isActive'] },
-    { fields: ['barcode'] },
   ]
 });
 

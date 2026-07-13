@@ -7,6 +7,10 @@ const Invoice = sequelize.define('Invoice', {
     primaryKey: true,
     autoIncrement: true
   },
+  businessId: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
   invoiceNumber: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -48,10 +52,9 @@ const Invoice = sequelize.define('Invoice', {
   timestamps: true,
   tableName: 'invoices',
   indexes: [
+    { fields: ['businessId'] },
     { fields: ['clientId'] },
     { fields: ['status'] },
-    { fields: ['createdAt'] },
-    { fields: ['createdBy'] },
   ]
 });
 

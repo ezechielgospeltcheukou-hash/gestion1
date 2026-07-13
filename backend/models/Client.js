@@ -7,6 +7,10 @@ const Client = sequelize.define('Client', {
     primaryKey: true,
     autoIncrement: true
   },
+  businessId: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
   name: {
     type: DataTypes.STRING,
     allowNull: false
@@ -17,10 +21,7 @@ const Client = sequelize.define('Client', {
   },
   email: {
     type: DataTypes.STRING,
-    allowNull: true,
-    validate: {
-      isEmail: true
-    }
+    allowNull: true
   },
   address: {
     type: DataTypes.TEXT,
@@ -50,9 +51,9 @@ const Client = sequelize.define('Client', {
   timestamps: true,
   tableName: 'clients',
   indexes: [
+    { fields: ['businessId'] },
     { fields: ['name'] },
     { fields: ['isActive'] },
-    { fields: ['createdBy'] },
   ]
 });
 

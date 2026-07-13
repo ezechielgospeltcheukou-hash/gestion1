@@ -1,4 +1,4 @@
-﻿const CashTransaction = require('../models/CashTransaction');
+const CashTransaction = require('../models/CashTransaction');
 const { Op, fn, col } = require('sequelize');
 
 const getCashTransactions = async (req, res, next) => {
@@ -8,12 +8,14 @@ const getCashTransactions = async (req, res, next) => {
     const offset = (page - 1) * limit;
 
     const { count, rows } = await CashTransaction.findAndCountAll({
+      where: { businessId: req.user.businessId },
       order: [['createdAt', 'DESC']],
       limit,
       offset
     });
 
     const totals = await CashTransaction.findAll({
+      where: { businessId: req.user.businessId },
       attributes: [
         'type',
         [fn('SUM', col('amount')), 'total']
@@ -43,7 +45,8 @@ const createCashTransaction = async (req, res, next) => {
       description,
       category,
       reference,
-      createdBy: req.user?.id
+      createdBy: req.user?.id,
+      businessId: req.user.businessId
     });
     res.status(201).json({ success: true, data: transaction, message: 'Transaction enregistrÃ©e' });
   } catch (error) {
@@ -54,7 +57,7 @@ const createCashTransaction = async (req, res, next) => {
 
 const deleteCashTransaction = async (req, res, next) => {
   try {
-    const transaction = await CashTransaction.findByPk(req.params.id);
+    const transaction = await CashTransaction.findOne({ where: { id: req.params.id, businessId: req.user.businessId } });
     if (!transaction) {
       return res.status(404).json({ success: false, message: 'Transaction non trouvÃ©e' });
     }

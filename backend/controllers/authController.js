@@ -40,6 +40,9 @@ const register = async (req, res, next) => {
       }
     });
 
+    user.businessId = user.id;
+    await user.save();
+
     const userWithoutPassword = { ...user.get() };
     delete userWithoutPassword.password;
 

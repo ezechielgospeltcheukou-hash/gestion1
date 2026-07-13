@@ -7,7 +7,6 @@ import { api } from '../../src/api/api';
 import { useThemeColors } from '../../src/theme/ThemeContext';
 import type { Product } from '../../src/api/api';
 import { getBusinessConfig } from '../../src/config/businessTypes';
-import { storage } from '../../src/utils/storage';
 
 // Helper: affiche alertes sur web et mobile
 const showAlert = (title: string, message?: string) => {
@@ -101,7 +100,7 @@ export default function InventoryScreen() {
   // Charger la config du commerce de l'utilisateur
   useEffect(() => {
     const loadBusinessConfig = async () => {
-      const userData = await storage.getUser();
+      const userData = await api.getUser();
       if (userData?.businessType) {
         setBusinessConfig(getBusinessConfig(userData.businessType));
       }

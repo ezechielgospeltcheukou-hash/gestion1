@@ -1,4 +1,4 @@
-﻿import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, StatusBar, ActivityIndicator, Alert, Animated, RefreshControl, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { 
@@ -29,6 +29,8 @@ import {
 import { useFocusEffect, useRouter } from 'expo-router';
 import { api } from '../../src/api/api';
 import { useThemeColors } from '../../src/theme/ThemeContext';
+import { generateBilanPDF } from '../../src/utils/pdfGenerator';
+import { getBusinessConfig } from '../../src/config/businessTypes';
 
 // Helper: affiche alertes sur web et mobile
 const showAlert = (title: string, message?: string) => {
@@ -185,6 +187,29 @@ export default function Dashboard() {
     }, [fetchData])
   );
 
+  const handleExportBilan = async () => {
+    if (!stats || !stats.bilan) {
+      showAlert('Erreur', 'Les statistiques ne sont pas encore chargées.');
+      return;
+    }
+    const businessConfig = getBusinessConfig(currentUser?.businessType || 'GENERAL');
+    const formattedStats = {
+      chiffreAffaires: { total: stats.bilan.chiffreAffairesTotal },
+      resultatNet: stats.bilan.resultatNet,
+      depenses: { total: stats.bilan.depensesTotal },
+      tresorerie: {
+        encaissement: stats.bilan.encaissements,
+        decaissement: stats.bilan.decaissements,
+        solde: stats.bilan.tresorerie
+      },
+      indicateurs: {
+        totalVentes: 'N/A',
+        valeurMoyennePanier: 'N/A'
+      }
+    };
+    await generateBilanPDF(formattedStats, businessConfig, 'Bilan Global');
+  };
+
   const isAdmin = currentUser?.role === 'ADMIN';
 
   const allMenuItems: Array<MenuItem & { permission: keyof any }> = [
@@ -300,6 +325,14 @@ export default function Dashboard() {
               {stats ? (stats.netProfit || 0).toLocaleString() : '0'} {currency}
             </Text>
           </View>
+
+          <TouchableOpacity 
+            style={[styles.exportButton, { backgroundColor: colors.primary }]} 
+            onPress={handleExportBilan}
+          >
+            <FileText size={20} color="white" />
+            <Text style={styles.exportButtonText}>Exporter le Bilan en PDF</Text>
+          </TouchableOpacity>
         </Animated.View>
 
         {/* Menu Grid */}
@@ -425,6 +458,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10
   },
   footer: { alignItems: 'center', marginTop: 10, padding: 20 },
-  footerText: { color: '#9ca3af', fontSize: 12, marginTop: 4 }
+  footerText: { color: '#9ca3af', fontSize: 12, marginTop: 4 },
+  exportButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 12,
+    marginTop: 15,
+    marginHorizontal: 5,
+    gap: 10,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    width: '100%',
+  },
+  exportButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold'
+  }
 });
 

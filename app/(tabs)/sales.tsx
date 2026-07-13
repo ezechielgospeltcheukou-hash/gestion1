@@ -6,7 +6,8 @@ import { ArrowLeft, Plus, Save, Trash2, ShoppingCart, Package, DollarSign, Recei
 import { api } from '../../src/api/api';
 import { useThemeColors } from '../../src/theme/ThemeContext';
 import type { Product, Sale } from '../../src/api/api';
-
+import { generateSaleReceiptPDF } from '../../src/utils/pdfGenerator';
+import { getBusinessConfig } from '../../src/config/businessTypes';
 // Helper: affiche alertes sur web et mobile
 const showAlert = (title: string, message?: string) => {
   if (typeof window !== 'undefined' && typeof (window as any).alert === 'function') {
@@ -16,7 +17,7 @@ const showAlert = (title: string, message?: string) => {
   }
 };
 
-function SaleItem({ sale, index, products, onDelete, getProductName }: { sale: Sale, index: number, products: Product[], onDelete: (sale: Sale) => void, getProductName: (id: number) => string }) {
+function SaleItem({ sale, index, products, onDelete, getProductName, onPrint }: { sale: Sale, index: number, products: Product[], onDelete: (sale: Sale) => void, getProductName: (id: number) => string, onPrint: (sale: Sale) => void }) {
   const itemFadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -67,9 +68,14 @@ function SaleItem({ sale, index, products, onDelete, getProductName }: { sale: S
       </View>
       <View style={styles.saleRight}>
         <Text style={styles.saleAmount}>{Number(sale.totalPrice).toLocaleString()} FCFA</Text>
-        <TouchableOpacity style={styles.deleteButton} onPress={() => onDelete(sale)}>
-          <Trash2 size={16} color="white" />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+          <TouchableOpacity style={styles.printButton} onPress={() => onPrint(sale)}>
+            <Receipt size={16} color="white" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.deleteButton} onPress={() => onDelete(sale)}>
+            <Trash2 size={16} color="white" />
+          </TouchableOpacity>
+        </View>
       </View>
     </Animated.View>
   );
@@ -99,8 +105,29 @@ export default function SalesScreen() {
     paymentMethod: 'Espèces',
     discount: 0,
     notes: '',
+    notes: '',
     customUnitPrice: ''
   });
+
+  const [businessConfig, setBusinessConfig] = useState(getBusinessConfig('GENERAL'));
+
+  useEffect(() => {
+    const loadBusinessConfig = async () => {
+      const userData = await api.getUser();
+      if (userData?.businessType) {
+        setBusinessConfig(getBusinessConfig(userData.businessType));
+      }
+    };
+    loadBusinessConfig();
+  }, []);
+
+  const handlePrint = async (sale: Sale) => {
+    const saleWithDetails = {
+      ...sale,
+      productName: getProductName(sale.productId)
+    };
+    await generateSaleReceiptPDF(saleWithDetails, businessConfig);
+  };
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
@@ -314,6 +341,7 @@ export default function SalesScreen() {
                 products={products}
                 onDelete={handleDelete}
                 getProductName={getProductName}
+                onPrint={handlePrint}
               />
             ))
           )}
@@ -588,6 +616,11 @@ const styles = StyleSheet.create({
   saleAmount: { fontSize: 20, fontWeight: 'bold', color: '#059669', marginBottom: 12 },
   deleteButton: {
     backgroundColor: '#ef4444',
+    padding: 8,
+    borderRadius: 10
+  },
+  printButton: {
+    backgroundColor: '#3b82f6',
     padding: 8,
     borderRadius: 10
   },

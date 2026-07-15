@@ -1,4 +1,4 @@
-﻿import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Switch, ScrollView, Alert, Modal, TextInput, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, User, Bell, Lock, HelpCircle, LogOut, Edit, Save } from 'lucide-react-native';
@@ -148,21 +148,21 @@ export default function SettingsScreen() {
 
   const handleLogout = () => {
     if (Platform.OS === 'web') {
-      if (window.confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
+      if (window.confirm('Voulez-vous vraiment vous déconnecter ?')) {
         api.logout().then(() => {
           try {
-            router.replace('/(auth)');
+            router.replace('/(auth)/login');
           } catch {
-            router.push('/(auth)');
+            router.push('/(auth)/login');
           }
         });
       }
       return;
     }
 
-    showAlert(
+    Alert.alert(
       'Déconnexion',
-      'Êtes-vous sûr de vouloir vous déconnecter ?',
+      'Voulez-vous vraiment vous déconnecter ?',
       [
         { text: 'Annuler', style: 'cancel' },
         { 
@@ -170,11 +170,13 @@ export default function SettingsScreen() {
           style: 'destructive',
           onPress: async () => {
             await api.logout();
-            try {
-              router.replace('/(auth)');
-            } catch {
-              router.push('/(auth)');
-            }
+            setTimeout(() => {
+              try {
+                router.replace('/(auth)/login');
+              } catch {
+                router.push('/(auth)/login');
+              }
+            }, 100);
           }
         }
       ]

@@ -108,28 +108,25 @@ export default function Dashboard() {
 
   const handleLogout = async () => {
     if (Platform.OS === 'web') {
-      if (window.confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
+      if (window.confirm('Voulez-vous vraiment vous déconnecter ?')) {
         await api.logout();
         router.replace('/(auth)/login');
       }
       return;
     }
-
-    showAlert(
-      'Déconnexion',
-      'Êtes-vous sûr de vouloir vous déconnecter ?',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Se déconnecter',
-          style: 'destructive',
-          onPress: async () => {
-            await api.logout();
+    
+    Alert.alert('Déconnexion', 'Voulez-vous vraiment vous déconnecter ?', [
+      { text: 'Annuler', style: 'cancel' },
+      {
+        text: 'Oui',
+        onPress: async () => {
+          await api.logout();
+          setTimeout(() => {
             router.replace('/(auth)/login');
-          }
+          }, 100);
         }
-      ]
-    );
+      }
+    ]);
   };
 
   const fetchData = useCallback(async () => {

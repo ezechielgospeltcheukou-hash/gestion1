@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal, ActivityIndicator, Animated, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal, ActivityIndicator, Animated, RefreshControl, Platform } from 'react-native';
 import { Package, Plus, Edit, Trash2, Save, ArrowLeft, Search } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -7,6 +7,7 @@ import { api } from '../../src/api/api';
 import { useThemeColors } from '../../src/theme/ThemeContext';
 import type { Product } from '../../src/api/api';
 import { getBusinessConfig } from '../../src/config/businessTypes';
+import Skeleton from '../../src/components/Skeleton';
 
 // Helper: affiche alertes sur web et mobile
 const showAlert = (title: string, message?: string) => {
@@ -82,6 +83,10 @@ export default function InventoryScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [businessConfig, setBusinessConfig] = useState(getBusinessConfig('GENERAL'));
+  const [adminAuthVisible, setAdminAuthVisible] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [pendingDeleteItem, setPendingDeleteItem] = useState<Product | null>(null);
+  const [authLoading, setAuthLoading] = useState(false);
   const [extraValues, setExtraValues] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     name: '',
@@ -207,6 +212,34 @@ export default function InventoryScreen() {
     }
   };
 
+  const verifyLocalAdminPIN = async (pin: string): Promise<boolean> => {
+    if (Platform.OS === 'web') {
+      return pin === '0000'; // Default fallback PIN for web offline
+    }
+    try {
+      const { verifyAdminPIN } = require('../../src/database/database');
+      return await verifyAdminPIN(pin);
+    } catch (err) {
+      console.error('verifyLocalAdminPIN error:', err);
+      return false;
+    }
+  };
+
+  const performDelete = async (product: Product, passwordAdmin?: string) => {
+    try {
+      const response = await api.deleteProduct(product.id!, passwordAdmin);
+      if (response.success) {
+        showAlert('Succès', 'Produit supprimé');
+        loadProducts();
+      } else {
+        showAlert('Erreur', response.message || 'Une erreur est survenue');
+      }
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      showAlert('Erreur', 'Impossible de supprimer le produit');
+    }
+  };
+
   const handleDelete = (product: Product) => {
     showAlert(
       'Confirmation',
@@ -218,16 +251,17 @@ export default function InventoryScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const response = await api.deleteProduct(product.id!);
-              if (response.success) {
-                showAlert('Succès', 'Produit supprimé');
-                loadProducts();
+              const user = await api.getUser();
+              if (user?.role === 'ADMIN') {
+                performDelete(product);
               } else {
-                showAlert('Erreur', response.message || 'Une erreur est survenue');
+                setPendingDeleteItem(product);
+                setAdminPassword('');
+                setAdminAuthVisible(true);
               }
             } catch (error) {
-              console.error('Error deleting product:', error);
-              showAlert('Erreur', 'Impossible de supprimer le produit');
+              console.error('Error in delete check:', error);
+              showAlert('Erreur', 'Impossible d\'initier la suppression');
             }
           }
         }
@@ -293,13 +327,23 @@ export default function InventoryScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.loadingContainer}>
-          <View style={styles.loadingIcon}>
-            <Package size={40} color="#059669" />
-          </View>
-          <ActivityIndicator size="large" color="#059669" />
-          <Text style={styles.loadingText}>Chargement...</Text>
-        </View>
+        <ScrollView style={[styles.content, { backgroundColor: colors.background, padding: 16 }]}>
+          {[1, 2, 3, 4, 5].map((item) => (
+            <View key={item} style={{ backgroundColor: colors.card, borderRadius: 12, padding: 16, marginBottom: 12, elevation: 2, shadowColor: colors.shadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+                <View style={{ flex: 1, marginRight: 16 }}>
+                  <Skeleton width="70%" height={24} style={{ marginBottom: 8 }} />
+                  <Skeleton width="40%" height={16} />
+                </View>
+                <Skeleton width={80} height={24} />
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Skeleton width={60} height={20} />
+                <Skeleton width={60} height={20} borderRadius={10} />
+              </View>
+            </View>
+          ))}
+        </ScrollView>
       ) : (
         <ScrollView style={[styles.content, { backgroundColor: colors.background }]} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#059669']} tintColor="#059669" />}>
           {filteredProducts.length === 0 ? (
@@ -324,6 +368,89 @@ export default function InventoryScreen() {
           )}
         </ScrollView>
       )}
+
+      <Modal
+        visible={adminAuthVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setAdminAuthVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.authModalContainer}>
+            <Text style={styles.authModalTitle}>Autorisation requise</Text>
+            <Text style={styles.authModalText}>
+              Seul l'administrateur peut supprimer un produit. Saisissez le mot de passe administrateur :
+            </Text>
+            <TextInput
+              style={styles.authInput}
+              placeholder="Mot de passe / PIN"
+              secureTextEntry
+              value={adminPassword}
+              onChangeText={setAdminPassword}
+              autoFocus
+            />
+            <View style={styles.authModalButtons}>
+              <TouchableOpacity
+                style={[styles.authButton, styles.authCancelButton]}
+                onPress={() => setAdminAuthVisible(false)}
+                disabled={authLoading}
+              >
+                <Text style={styles.authCancelButtonText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.authButton, styles.authConfirmButton]}
+                onPress={async () => {
+                  if (!adminPassword.trim()) {
+                    showAlert('Erreur', 'Veuillez saisir le mot de passe');
+                    return;
+                  }
+                  setAuthLoading(true);
+                  try {
+                    const user = await api.getUser();
+                    const isLocalOffline = user?.token && (user.token.startsWith('offline-') || user.token.startsWith('offline-web-'));
+                    
+                    if (isLocalOffline) {
+                      const isValid = await verifyLocalAdminPIN(adminPassword);
+                      if (!isValid) {
+                        showAlert('Erreur', 'Code PIN administrateur incorrect');
+                        setAuthLoading(false);
+                        return;
+                      }
+                      setAdminAuthVisible(false);
+                      if (pendingDeleteItem) {
+                        performDelete(pendingDeleteItem);
+                      }
+                    } else {
+                      if (pendingDeleteItem) {
+                        const response = await api.deleteProduct(pendingDeleteItem.id!, adminPassword);
+                        if (response.success) {
+                          showAlert('Succès', 'Produit supprimé');
+                          setAdminAuthVisible(false);
+                          loadProducts();
+                        } else {
+                          showAlert('Erreur', response.message || 'Autorisation incorrecte ou impossible');
+                        }
+                      }
+                    }
+                  } catch (err) {
+                    console.error('Delete auth error:', err);
+                    showAlert('Erreur', 'Une erreur est survenue lors de la suppression');
+                  } finally {
+                    setAuthLoading(false);
+                  }
+                }}
+                disabled={authLoading}
+              >
+                {authLoading ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  <Text style={styles.authConfirmButtonText}>Confirmer</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         visible={modalVisible}
@@ -640,5 +767,77 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#065f46',
     marginBottom: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  authModalContainer: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  authModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  authModalText: {
+    fontSize: 15,
+    color: '#4b5563',
+    marginBottom: 20,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  authInput: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 16,
+    backgroundColor: '#f9fafb',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  authModalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  authButton: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  authCancelButton: {
+    backgroundColor: '#f3f4f6',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  authConfirmButton: {
+    backgroundColor: '#ef4444',
+  },
+  authCancelButtonText: {
+    color: '#374151',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  authConfirmButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

@@ -385,6 +385,27 @@ export const getUser = () => {
   }
 };
 
+export const verifyAdminPIN = async (pin: string): Promise<boolean> => {
+  try {
+    const database = getDB();
+    const adminUser = database.getFirstSync<User>("SELECT * FROM users WHERE role = 'ADMIN' LIMIT 1");
+    if (!adminUser || !adminUser.password) return false;
+    
+    if (adminUser.password.includes(':')) {
+      const parts = adminUser.password.split(':');
+      const salt = parts.slice(1).join(':');
+      if (!salt) return false;
+      return await verifyPIN(pin, adminUser.password, salt);
+    } else {
+      return adminUser.password === pin;
+    }
+  } catch (error) {
+    console.error('verifyAdminPIN error:', error);
+    return false;
+  }
+};
+
+
 export const getUsers = (): User[] => {
   try {
     const database = getDB();

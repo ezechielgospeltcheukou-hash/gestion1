@@ -1,5 +1,6 @@
 const Sale = require('../models/Sale');
 const Product = require('../models/Product');
+const User = require('../models/User');
 const sequelize = require('../config/database');
 
 const getSales = async (req, res, next) => {
@@ -25,7 +26,7 @@ const getSaleById = async (req, res, next) => {
   try {
     const sale = await Sale.findOne({ where: { id: req.params.id, businessId: req.user.businessId } });
     if (!sale) {
-      return res.status(404).json({ success: false, message: 'Vente non trouvÃ©e' });
+      return res.status(404).json({ success: false, message: 'Vente non trouvée' });
     }
     res.json({ success: true, data: sale });
   } catch (error) {
@@ -37,18 +38,14 @@ const getSaleById = async (req, res, next) => {
 const createSale = async (req, res, next) => {
   let transaction;
   try {
+    const { productId, quantity, paymentMethod, transactionReference, discount, notes, customUnitPrice, totalPrice } = req.body;
+    
     transaction = await sequelize.transaction();
-    const { productId, quantity, paymentMethod, transactionReference, notes, discount, customUnitPrice } = req.body;
-
-    if (!productId || !quantity) {
-      await transaction.rollback();
-      return res.status(400).json({ success: false, message: 'Veuillez fournir produit et quantitÃ©' });
-    }
 
     const product = await Product.findOne({ where: { id: productId, businessId: req.user.businessId }, transaction });
     if (!product) {
       await transaction.rollback();
-      return res.status(404).json({ success: false, message: 'Produit non trouvÃ©' });
+      return res.status(404).json({ success: false, message: 'Produit non trouvé' });
     }
 
     if (product.stock < quantity) {
@@ -56,33 +53,29 @@ const createSale = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Stock insuffisant' });
     }
 
-    const unitPrice = customUnitPrice !== undefined && customUnitPrice !== null ? parseFloat(customUnitPrice) : product.price;
-    const discountAmount = discount || 0;
-    const totalPrice = (unitPrice * quantity) * (1 - discountAmount / 100);
-
-    const pm = paymentMethod || 'Especes';
-    const finalPaymentMethod = pm.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    // Calcul du prix de vente unitaire
+    const unitPrice = customUnitPrice !== undefined ? customUnitPrice : product.price;
+    const computedTotal = totalPrice !== undefined ? totalPrice : (unitPrice * quantity * (1 - (discount || 0) / 100));
 
     const sale = await Sale.create({
       productId,
       quantity,
-      totalPrice,
+      unitPriceAtSale: unitPrice,
       purchasePriceAtSale: product.purchasePrice || 0,
-      paymentMethod: finalPaymentMethod,
+      totalPrice: computedTotal,
+      paymentMethod,
       transactionReference,
-      soldBy: req.user.id,
-      businessId: req.user.businessId,
-      discount: discountAmount,
-      notes
+      discount,
+      notes,
+      userId: req.user.id,
+      businessId: req.user.businessId
     }, { transaction });
 
-    await product.update(
-      { stock: product.stock - quantity },
-      { transaction }
-    );
+    await product.update({ stock: product.stock - quantity }, { transaction });
 
     await transaction.commit();
-    res.status(201).json({ success: true, data: sale, message: 'Vente enregistrÃ©e' });
+    res.status(201).json({ success: true, data: sale, message: 'Vente enregistrée' });
+
   } catch (error) {
     if (transaction) await transaction.rollback().catch(() => {});
     console.error('Erreur createSale:', error);
@@ -91,6 +84,26 @@ const createSale = async (req, res, next) => {
 };
 
 const deleteSale = async (req, res, next) => {
+  try {
+    if (req.user.role !== 'ADMIN') {
+      const adminPassword = req.headers['x-admin-password'];
+      if (!adminPassword) {
+        return res.status(403).json({ success: false, message: 'Autorisation requise de l\'administrateur' });
+      }
+      
+      const adminUser = await User.findOne({
+        where: { id: req.user.businessId, role: 'ADMIN' }
+      });
+      
+      if (!adminUser || !(await adminUser.comparePassword(adminPassword))) {
+        return res.status(403).json({ success: false, message: 'Mot de passe administrateur incorrect' });
+      }
+    }
+  } catch (authError) {
+    console.error('Erreur validation admin deleteSale:', authError);
+    return res.status(500).json({ success: false, message: 'Erreur d\'autorisation' });
+  }
+
   let transaction;
   try {
     transaction = await sequelize.transaction();
@@ -98,7 +111,7 @@ const deleteSale = async (req, res, next) => {
     const sale = await Sale.findOne({ where: { id: req.params.id, businessId: req.user.businessId }, transaction });
     if (!sale) {
       await transaction.rollback();
-      return res.status(404).json({ success: false, message: 'Vente non trouvÃ©e' });
+      return res.status(404).json({ success: false, message: 'Vente non trouvée' });
     }
 
     const product = await Product.findOne({ where: { id: sale.productId, businessId: req.user.businessId }, transaction });
@@ -111,7 +124,7 @@ const deleteSale = async (req, res, next) => {
 
     await sale.destroy({ transaction });
     await transaction.commit();
-    res.json({ success: true, message: 'Vente annulÃ©e et stock restituÃ©' });
+    res.json({ success: true, message: 'Vente annulée et stock restitué' });
   } catch (error) {
     if (transaction) await transaction.rollback().catch(() => {});
     console.error('Erreur deleteSale:', error);

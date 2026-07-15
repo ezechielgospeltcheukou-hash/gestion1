@@ -117,9 +117,9 @@ User.beforeCreate(async (user) => {
       where: { role: 'EMPLOYEE', businessId: user.businessId }
     });
     const nextNum = lastUser && lastUser.employeeCode
-      ? parseInt(lastUser.employeeCode.replace('EMP-', '')) + 1
+      ? parseInt(lastUser.employeeCode.split('-').pop()) + 1
       : 1;
-    user.employeeCode = `EMP-${String(nextNum).padStart(3, '0')}`;
+    user.employeeCode = `B${user.businessId}-EMP-${String(nextNum).padStart(3, '0')}`;
   }
 });
 

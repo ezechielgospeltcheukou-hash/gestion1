@@ -1,4 +1,4 @@
-﻿const Sale = require('../models/Sale');
+const Sale = require('../models/Sale');
 const Expense = require('../models/Expense');
 const Product = require('../models/Product');
 const Client = require('../models/Client');
@@ -34,22 +34,22 @@ const getStats = async (req, res, next) => {
       allSales,
       allExpenses,
     ] = await Promise.all([
-      Sale.sum('totalPrice', { where: { createdAt: { [Op.gte]: today } } }),
-      Sale.sum('totalPrice', { where: { createdAt: { [Op.between]: [yesterday, today] } } }),
-      Sale.sum('totalPrice', { where: { createdAt: { [Op.gte]: thisMonth } } }),
-      Sale.sum('totalPrice', { where: { createdAt: { [Op.between]: [lastMonth, thisMonth] } } }),
-      Expense.sum('amount', { where: { date: { [Op.gte]: thisMonth } } }),
-      Expense.sum('amount', { where: { date: { [Op.between]: [lastMonth, thisMonth] } } }),
-      Product.count({ where: { stock: { [Op.lt]: 10 } } }),
-      Product.count({ where: { isActive: true } }),
-      Client.count({ where: { isActive: true } }),
-      Supplier.count({ where: { isActive: true } }),
-      Product.findAll({ where: { isActive: true }, attributes: ['purchasePrice', 'stock'], raw: true }),
-      CashTransaction.findAll({ raw: true }),
-      Credit.findAll({ where: { personType: 'CLIENT', isRepaid: false }, raw: true }),
-      Credit.findAll({ where: { personType: 'SUPPLIER', isRepaid: false }, raw: true }),
-      Sale.findAll({ raw: true }),
-      Expense.findAll({ raw: true }),
+      Sale.sum('totalPrice', { where: { businessId: req.user.businessId, createdAt: { [Op.gte]: today } } }),
+      Sale.sum('totalPrice', { where: { businessId: req.user.businessId, createdAt: { [Op.between]: [yesterday, today] } } }),
+      Sale.sum('totalPrice', { where: { businessId: req.user.businessId, createdAt: { [Op.gte]: thisMonth } } }),
+      Sale.sum('totalPrice', { where: { businessId: req.user.businessId, createdAt: { [Op.between]: [lastMonth, thisMonth] } } }),
+      Expense.sum('amount', { where: { businessId: req.user.businessId, date: { [Op.gte]: thisMonth } } }),
+      Expense.sum('amount', { where: { businessId: req.user.businessId, date: { [Op.between]: [lastMonth, thisMonth] } } }),
+      Product.count({ where: { businessId: req.user.businessId, stock: { [Op.lt]: 10 } } }),
+      Product.count({ where: { businessId: req.user.businessId, isActive: true } }),
+      Client.count({ where: { businessId: req.user.businessId, isActive: true } }),
+      Supplier.count({ where: { businessId: req.user.businessId, isActive: true } }),
+      Product.findAll({ where: { businessId: req.user.businessId, isActive: true }, attributes: ['purchasePrice', 'stock'], raw: true }),
+      CashTransaction.findAll({ where: { businessId: req.user.businessId }, raw: true }),
+      Credit.findAll({ where: { businessId: req.user.businessId, personType: 'CLIENT', isRepaid: false }, raw: true }),
+      Credit.findAll({ where: { businessId: req.user.businessId, personType: 'SUPPLIER', isRepaid: false }, raw: true }),
+      Sale.findAll({ where: { businessId: req.user.businessId }, raw: true }),
+      Expense.findAll({ where: { businessId: req.user.businessId }, raw: true }),
     ]);
 
     const stockVal = allProducts.reduce((s, p) => s + (parseFloat(p.purchasePrice || 0) * (p.stock || 0)), 0);

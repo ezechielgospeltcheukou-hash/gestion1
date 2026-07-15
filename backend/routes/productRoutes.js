@@ -15,7 +15,7 @@ router.get('/', protect, paginationValidation, getProducts);
 router.get('/:id', protect, getProductById);
 router.post('/', protect, authorize('ADMIN'), productValidation.create, createProduct);
 router.put('/:id', protect, authorize('ADMIN'), productValidation.update, updateProduct);
-router.delete('/:id', protect, authorize('ADMIN'), deleteProduct);
+router.delete('/:id', protect, deleteProduct);
 router.post('/:id/adjust-stock', protect, adjustStock);
 
 module.exports = router;

@@ -14,6 +14,6 @@ router.get('/', protect, paginationValidation, getSales);
 router.get('/stats', protect, getSalesStats);
 router.get('/:id', protect, getSaleById);
 router.post('/', protect, saleValidation.create, createSale);
-router.delete('/:id', protect, authorize('ADMIN'), deleteSale);
+router.delete('/:id', protect, deleteSale);
 
 module.exports = router;

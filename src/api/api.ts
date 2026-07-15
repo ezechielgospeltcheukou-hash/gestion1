@@ -617,6 +617,20 @@ class ApiService {
   async logout() {
     this.token = null;
     this.user = null;
+    // NE PAS vider le cache des données métier ici — elles appartiennent à l'établissement
+    // et doivent rester disponibles pour la prochaine connexion (admin ou employé du même établissement).
+    // Seules les informations d'authentification doivent être supprimées.
+    await this.clearAuthFromStorage();
+    // On efface uniquement le cache des stats (recalculé à la connexion suivante)
+    // mais on conserve les données : products, sales, expenses, clients, suppliers, etc.
+    await storage.removeItem('cache_stats');
+  }
+
+  // Déconnexion complète : utilisé uniquement si on veut changer d'établissement
+  // ou si on veut forcer le rechargement de toutes les données depuis le serveur.
+  async logoutFull() {
+    this.token = null;
+    this.user = null;
     this.cachedStats = null;
     this.cachedClients = [];
     this.cachedProducts = [];
@@ -1013,12 +1027,16 @@ class ApiService {
     }
   }
 
-  async deleteProduct(id: number): Promise<ApiResponse<void>> {
+  async deleteProduct(id: number, adminPassword?: string): Promise<ApiResponse<void>> {
     await this.waitUntilReady();
     try {
+      const headers: Record<string, string> = { ...this.getHeaders() };
+      if (adminPassword) {
+        headers['x-admin-password'] = adminPassword;
+      }
       const response = await fetchWithTimeout(`${API_BASE_URL}/products/${id}`, {
         method: 'DELETE',
-        headers: this.getHeaders(),
+        headers,
       });
       const result = await this.handleResponse<void>(response);
       if (result.success) {
@@ -1120,12 +1138,16 @@ class ApiService {
     }
   }
 
-  async deleteSale(id: number): Promise<ApiResponse<void>> {
+  async deleteSale(id: number, adminPassword?: string): Promise<ApiResponse<void>> {
     await this.waitUntilReady();
     try {
+      const headers: Record<string, string> = { ...this.getHeaders() };
+      if (adminPassword) {
+        headers['x-admin-password'] = adminPassword;
+      }
       const response = await fetchWithTimeout(`${API_BASE_URL}/sales/${id}`, {
         method: 'DELETE',
-        headers: this.getHeaders(),
+        headers,
       });
       const result = await this.handleResponse<void>(response);
       if (result.success) {

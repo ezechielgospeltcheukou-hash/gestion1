@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal, ActivityIndicator, Animated, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal, ActivityIndicator, Animated, RefreshControl, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { ArrowLeft, Plus, Save, Trash2, ShoppingCart, Package, DollarSign, Receipt } from 'lucide-react-native';
@@ -8,6 +8,7 @@ import { useThemeColors } from '../../src/theme/ThemeContext';
 import type { Product, Sale } from '../../src/api/api';
 import { generateSaleReceiptPDF } from '../../src/utils/pdfGenerator';
 import { getBusinessConfig } from '../../src/config/businessTypes';
+import Skeleton from '../../src/components/Skeleton';
 // Helper: affiche alertes sur web et mobile
 const showAlert = (title: string, message?: string) => {
   if (typeof window !== 'undefined' && typeof (window as any).alert === 'function') {
@@ -90,6 +91,10 @@ export default function SalesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
+  const [adminAuthVisible, setAdminAuthVisible] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [pendingDeleteSale, setPendingDeleteSale] = useState<Sale | null>(null);
+  const [authLoading, setAuthLoading] = useState(false);
   const [formData, setFormData] = useState({
     productId: 0,
     quantity: 1,
@@ -233,6 +238,34 @@ export default function SalesScreen() {
     }
   };
 
+  const verifyLocalAdminPIN = async (pin: string): Promise<boolean> => {
+    if (Platform.OS === 'web') {
+      return pin === '0000'; // Default fallback PIN for web offline
+    }
+    try {
+      const { verifyAdminPIN } = require('../../src/database/database');
+      return await verifyAdminPIN(pin);
+    } catch (err) {
+      console.error('verifyLocalAdminPIN error:', err);
+      return false;
+    }
+  };
+
+  const performDeleteSale = async (sale: Sale, passwordAdmin?: string) => {
+    try {
+      const response = await api.deleteSale(sale.id!, passwordAdmin);
+      if (response.success) {
+        showAlert('Succès', 'Vente annulée');
+        loadData();
+      } else {
+        showAlert('Erreur', response.message || 'Impossible d\'annuler la vente');
+      }
+    } catch (error) {
+      console.error('Error deleting sale:', error);
+      showAlert('Erreur', 'Impossible d\'annuler la vente');
+    }
+  };
+
   const handleDelete = (sale: Sale) => {
     showAlert(
       'Confirmation',
@@ -244,16 +277,17 @@ export default function SalesScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const response = await api.deleteSale(sale.id!);
-              if (response.success) {
-                showAlert('Succès', 'Vente annulée');
-                loadData();
+              const user = await api.getUser();
+              if (user?.role === 'ADMIN') {
+                performDeleteSale(sale);
               } else {
-                showAlert('Erreur', response.message || 'Impossible d\'annuler la vente');
+                setPendingDeleteSale(sale);
+                setAdminPassword('');
+                setAdminAuthVisible(true);
               }
             } catch (error) {
-              console.error('Error deleting sale:', error);
-              showAlert('Erreur', 'Impossible d\'annuler la vente');
+              console.error('Error in delete sale check:', error);
+              showAlert('Erreur', 'Impossible d\'initier l\'annulation');
             }
           }
         }
@@ -310,13 +344,23 @@ export default function SalesScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.loadingContainer}>
-          <View style={styles.loadingLogo}>
-            <ShoppingCart size={40} color="#059669" />
-          </View>
-          <ActivityIndicator size="large" color="#059669" />
-          <Text style={styles.loadingText}>Chargement...</Text>
-        </View>
+        <ScrollView style={[styles.content, { backgroundColor: colors.background, padding: 16 }]}>
+          {[1, 2, 3, 4, 5].map((item) => (
+            <View key={item} style={{ backgroundColor: colors.card, borderRadius: 12, padding: 16, marginBottom: 12, elevation: 2, shadowColor: colors.shadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+                <View style={{ flex: 1, marginRight: 16 }}>
+                  <Skeleton width="70%" height={24} style={{ marginBottom: 8 }} />
+                  <Skeleton width="40%" height={16} />
+                </View>
+                <Skeleton width={80} height={24} />
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Skeleton width={60} height={20} />
+                <Skeleton width={60} height={20} borderRadius={10} />
+              </View>
+            </View>
+          ))}
+        </ScrollView>
       ) : (
         <ScrollView
           style={[styles.content, { backgroundColor: colors.background }]}
@@ -347,6 +391,89 @@ export default function SalesScreen() {
           )}
         </ScrollView>
       )}
+
+      <Modal
+        visible={adminAuthVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setAdminAuthVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.authModalContainer}>
+            <Text style={styles.authModalTitle}>Autorisation requise</Text>
+            <Text style={styles.authModalText}>
+              Seul l'administrateur peut annuler/supprimer une vente. Saisissez le mot de passe administrateur :
+            </Text>
+            <TextInput
+              style={styles.authInput}
+              placeholder="Mot de passe / PIN"
+              secureTextEntry
+              value={adminPassword}
+              onChangeText={setAdminPassword}
+              autoFocus
+            />
+            <View style={styles.authModalButtons}>
+              <TouchableOpacity
+                style={[styles.authButton, styles.authCancelButton]}
+                onPress={() => setAdminAuthVisible(false)}
+                disabled={authLoading}
+              >
+                <Text style={styles.authCancelButtonText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.authButton, styles.authConfirmButton]}
+                onPress={async () => {
+                  if (!adminPassword.trim()) {
+                    showAlert('Erreur', 'Veuillez saisir le mot de passe');
+                    return;
+                  }
+                  setAuthLoading(true);
+                  try {
+                    const user = await api.getUser();
+                    const isLocalOffline = user?.token && (user.token.startsWith('offline-') || user.token.startsWith('offline-web-'));
+                    
+                    if (isLocalOffline) {
+                      const isValid = await verifyLocalAdminPIN(adminPassword);
+                      if (!isValid) {
+                        showAlert('Erreur', 'Code PIN administrateur incorrect');
+                        setAuthLoading(false);
+                        return;
+                      }
+                      setAdminAuthVisible(false);
+                      if (pendingDeleteSale) {
+                        performDeleteSale(pendingDeleteSale);
+                      }
+                    } else {
+                      if (pendingDeleteSale) {
+                        const response = await api.deleteSale(pendingDeleteSale.id!, adminPassword);
+                        if (response.success) {
+                          showAlert('Succès', 'Vente annulée');
+                          setAdminAuthVisible(false);
+                          loadData();
+                        } else {
+                          showAlert('Erreur', response.message || 'Autorisation incorrecte ou impossible');
+                        }
+                      }
+                    }
+                  } catch (err) {
+                    console.error('Delete sale auth error:', err);
+                    showAlert('Erreur', 'Une erreur est survenue lors de la suppression');
+                  } finally {
+                    setAuthLoading(false);
+                  }
+                }}
+                disabled={authLoading}
+              >
+                {authLoading ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  <Text style={styles.authConfirmButtonText}>Confirmer</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={modalVisible} animationType="slide" onRequestClose={() => { setModalVisible(false); resetForm(); }}>
         <SafeAreaView style={styles.modalContainer}>
@@ -714,4 +841,76 @@ const styles = StyleSheet.create({
   lossWarningText: { color: '#dc2626', fontSize: 13, lineHeight: 18, fontWeight: '500' },
   saleProfitBadge: { alignSelf: 'flex-start', marginTop: 6, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
   saleProfitText: { fontSize: 12, fontWeight: 'bold' },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  authModalContainer: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  authModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  authModalText: {
+    fontSize: 15,
+    color: '#4b5563',
+    marginBottom: 20,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  authInput: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 16,
+    backgroundColor: '#f9fafb',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  authModalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  authButton: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  authCancelButton: {
+    backgroundColor: '#f3f4f6',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  authConfirmButton: {
+    backgroundColor: '#ef4444',
+  },
+  authCancelButtonText: {
+    color: '#374151',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  authConfirmButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });
